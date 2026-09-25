@@ -7,6 +7,8 @@ import { useToast } from '../lib/useToast'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import MaintenancePanel from '../components/MaintenancePanel'
+import VehicleTypeIcon from '../components/VehicleTypeIcon'
+import { ButtonSpinner } from '../components/Spinner'
 
 const EMPTY_FORM = {
   placa: '', modelo: '', tipo_vehiculo: 'Automóvil', ciudad: '', estado: 'Disponible',
@@ -148,7 +150,15 @@ export default function Dashboard() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-400 py-10 text-center">Cargando flota...</p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse">
+              <div className="h-4 bg-slate-100 rounded w-1/3 mb-2" />
+              <div className="h-3 bg-slate-100 rounded w-2/3 mb-4" />
+              <div className="h-3 bg-slate-100 rounded w-1/2" />
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-slate-400 py-10 text-center">Sin vehículos para este filtro.</p>
       ) : (
@@ -159,11 +169,14 @@ export default function Dashboard() {
             return (
               <button key={v.id} onClick={() => openEdit(v)} className="text-left bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md hover:border-slate-300 transition-all">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-mono font-bold text-slate-800">{v.placa}</p>
-                    <p className="text-xs text-slate-500 truncate max-w-[180px]" title={v.modelo}>{v.modelo}</p>
+                  <div className="flex items-start gap-2.5">
+                    <VehicleTypeIcon tipo={v.tipo_vehiculo} className="w-9 h-6 mt-0.5 text-slate-300 shrink-0" />
+                    <div>
+                      <p className="font-mono font-bold text-slate-800">{v.placa}</p>
+                      <p className="text-xs text-slate-500 truncate max-w-[150px]" title={v.modelo}>{v.modelo}</p>
+                    </div>
                   </div>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${style.badge}`}>{v.estado}</span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${style.badge}`}>{v.estado}</span>
                 </div>
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
                   <Icon name="MapPin" className="w-3.5 h-3.5" /> {v.ciudad}
@@ -200,7 +213,8 @@ export default function Dashboard() {
                   <Icon name="Trash2" className="w-4 h-4" /> Eliminar
                 </button>
               ) : <span />}
-              <button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+              <button onClick={save} disabled={saving} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+                {saving && <ButtonSpinner />}
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>

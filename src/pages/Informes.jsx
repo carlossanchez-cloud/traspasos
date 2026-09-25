@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Icon } from '../lib/icons'
 import { formatDate, todayISO } from '../lib/format'
+import Spinner from '../components/Spinner'
 
 const FILTROS = ['Todos', 'Préstamos Activos', 'En Taller', 'Devueltos/Cerrados']
 
@@ -71,7 +72,7 @@ export default function Informes() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-400 py-10 text-center">Cargando historial...</p>
+        <Spinner label="Cargando historial..." />
       ) : filtered.length === 0 ? (
         <p className="text-sm text-slate-400 py-10 text-center">Sin registros para este filtro.</p>
       ) : (

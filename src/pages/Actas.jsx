@@ -8,9 +8,15 @@ import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import SignaturePad from '../components/SignaturePad'
 import ActaPhotos from '../components/ActaPhotos'
+import Spinner, { ButtonSpinner } from '../components/Spinner'
 
 const CHECK_ITEMS = ['Carrocería', 'Llantas', 'Interior', 'Luces', 'Documentos en el vehículo']
 const ESTADOS = ['Bueno', 'Regular', 'Malo']
+const ESTADO_COLOR = {
+  Bueno: 'bg-emerald-600 text-white border-emerald-600',
+  Regular: 'bg-amber-500 text-white border-amber-500',
+  Malo: 'bg-red-600 text-white border-red-600',
+}
 
 const emptyChecklist = () => Object.fromEntries(CHECK_ITEMS.map((k) => [k, { estado: 'Bueno', obs: '' }]))
 const EMPTY = { tipo: 'Entrega', placa: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
@@ -30,14 +36,17 @@ export default function Actas() {
   const [firma, setFirma] = useState(null)
   const [saving, setSaving] = useState(false)
   const [viewing, setViewing] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   const load = async () => {
+    setLoading(true)
     const [{ data: v }, { data: a }] = await Promise.all([
       supabase.from('vehicles').select('placa').order('placa'),
       supabase.from('actas').select('*').order('created_at', { ascending: false }).limit(30),
     ])
     setPlacas((v || []).map((r) => r.placa))
     setActas(a || [])
+    setLoading(false)
   }
   useEffect(() => { load() }, [])
 
@@ -96,7 +105,9 @@ export default function Actas() {
         </button>
       </div>
 
-      {actas.length === 0 ? (
+      {loading ? (
+        <Spinner label="Cargando actas..." />
+      ) : actas.length === 0 ? (
         <p className="text-sm text-slate-400 py-10 text-center">Sin actas registradas todavía.</p>
       ) : (
         <div className="flex flex-col gap-2">
@@ -145,7 +156,7 @@ export default function Actas() {
                     <div className="flex gap-1">
                       {ESTADOS.map((e) => (
                         <button key={e} onClick={() => setCheck(item, 'estado', e)}
-                          className={`text-xs font-bold px-2 py-1 rounded-md border ${checklist[item].estado === e ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-200 text-slate-500'}`}>
+                          className={`text-xs font-bold px-2 py-1 rounded-md border transition-colors ${checklist[item].estado === e ? ESTADO_COLOR[e] : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
                           {e}
                         </button>
                       ))}
@@ -179,7 +190,8 @@ export default function Actas() {
           </div>
 
           <div className="flex justify-end mt-5 pt-4 border-t border-slate-100">
-            <button onClick={guardar} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+            <button onClick={guardar} disabled={saving} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+              {saving && <ButtonSpinner />}
               {saving ? 'Guardando...' : 'Guardar acta'}
             </button>
           </div>

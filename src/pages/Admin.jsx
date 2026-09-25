@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
 import { useToast } from '../lib/useToast'
 import Toast from '../components/Toast'
+import Spinner from '../components/Spinner'
 
 export default function Admin() {
   const { profile } = useAuth()
@@ -11,10 +12,17 @@ export default function Admin() {
   const [ciudades, setCiudades] = useState([])
   const [nueva, setNueva] = useState('')
   const [usuarios, setUsuarios] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const load = () => {
-    supabase.from('ciudades').select('nombre').order('nombre').then(({ data }) => setCiudades((data || []).map((r) => r.nombre)))
-    supabase.from('profiles').select('*').order('email').then(({ data }) => setUsuarios(data || []))
+  const load = async () => {
+    setLoading(true)
+    const [{ data: c }, { data: u }] = await Promise.all([
+      supabase.from('ciudades').select('nombre').order('nombre'),
+      supabase.from('profiles').select('*').order('email'),
+    ])
+    setCiudades((c || []).map((r) => r.nombre))
+    setUsuarios(u || [])
+    setLoading(false)
   }
   useEffect(() => { load() }, [])
 
@@ -58,7 +66,9 @@ export default function Admin() {
       <div className="bg-white border border-slate-200 rounded-xl p-5">
         <h2 className="text-sm font-black text-slate-500 uppercase mb-3">Usuarios y roles</h2>
         <p className="text-xs text-slate-400 mb-3">Solo entra quien tenga correo @rentandes.com. Aparecen aquí en cuanto inician sesión por primera vez.</p>
-        {usuarios.length === 0 ? (
+        {loading ? (
+          <Spinner label="Cargando usuarios..." className="py-6" />
+        ) : usuarios.length === 0 ? (
           <p className="text-sm text-slate-400">Todavía nadie más ha iniciado sesión.</p>
         ) : (
           <div className="flex flex-col gap-2">

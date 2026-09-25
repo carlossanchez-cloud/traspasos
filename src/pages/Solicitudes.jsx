@@ -6,6 +6,7 @@ import { formatDate, todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
+import Spinner, { ButtonSpinner } from '../components/Spinner'
 
 const EMPTY = { placa_contrato: '', tipo_vehiculo: 'Automóvil', ciudad: '', admin_flota: '', cliente_empresa: '', fecha_inicio: todayISO(), fecha_fin: '', observaciones: '' }
 
@@ -17,6 +18,7 @@ export default function Solicitudes() {
   const [sending, setSending] = useState(false)
 
   const [solicitudes, setSolicitudes] = useState([])
+  const [loadingSolicitudes, setLoadingSolicitudes] = useState(true)
   const [resolving, setResolving] = useState(null)
   const [candidatos, setCandidatos] = useState([])
   const [placaElegida, setPlacaElegida] = useState('')
@@ -27,11 +29,14 @@ export default function Solicitudes() {
       setForm((f) => ({ ...f, ciudad: data?.[0]?.nombre || '' }))
     })
     if (isAdmin) loadSolicitudes()
+    else setLoadingSolicitudes(false)
   }, [isAdmin])
 
   const loadSolicitudes = async () => {
+    setLoadingSolicitudes(true)
     const { data } = await supabase.from('solicitudes').select('*').order('created_at', { ascending: false })
     setSolicitudes(data || [])
+    setLoadingSolicitudes(false)
   }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -96,7 +101,8 @@ export default function Solicitudes() {
           <Field label="Observaciones"><textarea value={form.observaciones} onChange={set('observaciones')} rows={2} className={inputCls} /></Field>
         </div>
         <div className="sm:col-span-2 flex justify-end">
-          <button onClick={enviar} disabled={sending} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+          <button onClick={enviar} disabled={sending} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+            {sending && <ButtonSpinner />}
             {sending ? 'Enviando...' : 'Enviar solicitud'}
           </button>
         </div>
@@ -105,7 +111,9 @@ export default function Solicitudes() {
       {isAdmin && (
         <div className="mt-10">
           <h2 className="text-sm font-black text-slate-500 uppercase mb-3">Solicitudes pendientes ({pendientes.length})</h2>
-          {pendientes.length === 0 ? (
+          {loadingSolicitudes ? (
+            <Spinner label="Cargando solicitudes..." className="py-6" />
+          ) : pendientes.length === 0 ? (
             <p className="text-sm text-slate-400">No hay solicitudes pendientes.</p>
           ) : (
             <div className="flex flex-col gap-2">

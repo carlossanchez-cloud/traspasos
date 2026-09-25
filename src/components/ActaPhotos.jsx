@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import Spinner from './Spinner'
 
 // El bucket 'actas' es privado -> las fotos se guardan como PATH, no URL. Para mostrarlas
 // se pide una signed URL de corta duración (1h) justo al abrir la galería, no al listar.
@@ -30,7 +31,7 @@ export default function ActaPhotos({ acta }) {
     return () => { cancelled = true }
   }, [acta.id])
 
-  if (loading) return <p className="text-sm text-slate-400 py-6 text-center">Cargando fotos...</p>
+  if (loading) return <Spinner label="Cargando fotos..." className="py-6" />
 
   return (
     <div className="flex flex-col gap-4">

@@ -8,6 +8,7 @@ import Solicitudes from './pages/Solicitudes'
 import Admin from './pages/Admin'
 import Actas from './pages/Actas'
 import Informes from './pages/Informes'
+import Spinner from './components/Spinner'
 
 const NAV = [
   { to: '/', label: 'Flota', icon: 'Car', end: true },
@@ -57,7 +58,7 @@ function Shell({ children }) {
 function Gate({ children }) {
   const { session, profile, profileError, loading, signOut } = useAuth()
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Cargando...</div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner /></div>
   if (!session) return <Login />
   if (!profile) {
     return (
