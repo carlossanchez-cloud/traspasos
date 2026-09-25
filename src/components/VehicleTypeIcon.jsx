@@ -1,20 +1,40 @@
 // Silueta simple por tipo de vehículo (estilo Uber: un ícono, no una foto real del modelo).
-// Solo 3 tipos hoy (ver Tipo Vehículo en Solicitudes/Dashboard) — agregar aquí si se suma uno nuevo.
+// Construido con formas simples (no un solo path a mano) para que cada tipo se distinga
+// de verdad: Automóvil = techo bajo curvo, Camioneta = techo alto y recto, Pickup = cabina
+// corta + platón abierto atrás. Los 3 comparten el mismo cuerpo/ruedas para que se vean
+// como una familia de íconos, no dibujos sueltos.
+const Wheels = () => (
+  <>
+    <circle cx="14" cy="26" r="4" />
+    <circle cx="34" cy="26" r="4" />
+  </>
+)
+
 const SHAPES = {
   'Automóvil': (
-    <path d="M3 42c0 2 1.5 3.5 3.5 3.5H9c1 3 3.8 5 7 5s6-2 7-5h6c3.2 0 6-2 7-5h2.5c2 0 3.5-1.5 3.5-3.5v-6c0-1.5-1-3-2.5-3.4l-4-1.1-5-8C29.5 15 27 14 24 14H14c-3 0-5.5 1-7.5 4.5l-3.8 6.8L3 32.5V42z" />
+    <>
+      <path d="M4 24 Q4 17 12 16 Q17 9 24 9 Q31 9 34 16 L42 17 Q46 18 46 22 L46 24 Z" />
+      <Wheels />
+    </>
   ),
   'Camioneta': (
-    <path d="M3 40c0 2.2 1.8 4 4 4h2c1 3 3.8 5 7 5s6-2 7-5h5c1 3 3.8 5 7 5s6-2 7-5h1c1.7 0 3-1.3 3-3v-9c0-1.3-.7-2.5-1.8-3.1l-6.2-3.4-4-7C33 16 30 15 27 15H12c-3 0-5.5 1-7.5 4.5L2 26v14z" />
+    <>
+      <path d="M4 24 L4 18 Q4 11 12 11 L34 11 Q42 11 42 18 L46 20 Q46 24 46 24 Z" />
+      <Wheels />
+    </>
   ),
   'Pickup': (
-    <path d="M3 41c0 1.9 1.6 3.5 3.5 3.5H8c1 3 3.8 5 7 5s6-2 7-5h6v-16h9c2.5 0 4.5 1.5 5.5 3.5l2.5 6c1.2.4 2.5 1.6 2.5 3.5v3c0 1.7-1.3 3-3 3h-1c-1 3-3.8 5-7 5s-6-2-7-5H22V22H10c-3 0-5.5 1-7 4l-1.5 3L3 33v8z" />
+    <>
+      <path d="M4 24 L4 20 Q4 12 12 12 L20 12 Q24 12 24 17 L24 20 L40 20 L40 24 Z" />
+      <path d="M26 20 L26 15 L38 15 Q40 15 40 18 L40 20 Z" opacity="0.55" />
+      <Wheels />
+    </>
   ),
 }
 
 export default function VehicleTypeIcon({ tipo, className = 'w-10 h-6' }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} fill="currentColor" aria-label={tipo}>
+    <svg viewBox="0 0 50 32" className={className} fill="currentColor" aria-label={tipo}>
       {SHAPES[tipo] || SHAPES['Automóvil']}
     </svg>
   )
