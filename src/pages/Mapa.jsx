@@ -6,12 +6,16 @@ import { supabase } from '../lib/supabaseClient'
 import { Icon } from '../lib/icons'
 import { CITY_COORDS, cityCoords, distanceKm, titleCase } from '../lib/cityCoords'
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
+
 function cityIcon(stats) {
   const total = stats.Disponible + stats.Asignado + stats.Taller
   const html = `
     <div style="display:flex;flex-direction:column;align-items:center;width:85px;">
       <div style="background:#fff;border-radius:12px;box-shadow:0 10px 15px -3px rgb(0 0 0 / .15);border:1px solid #e2e8f0;padding:6px;display:flex;flex-direction:column;align-items:center;width:100%;">
-        <div style="font-weight:700;font-size:10px;color:#1e293b;margin-bottom:4px;">${stats.city}</div>
+        <div style="font-weight:700;font-size:10px;color:#1e293b;margin-bottom:4px;">${escapeHtml(stats.city)}</div>
         <div style="display:flex;gap:4px;">
           <span style="width:20px;height:20px;border-radius:6px;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Disponible}</span>
           <span style="width:20px;height:20px;border-radius:6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Asignado}</span>
