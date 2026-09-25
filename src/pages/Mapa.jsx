@@ -83,7 +83,7 @@ export default function Mapa() {
 
       <div className="relative" style={{ height: 560 }}>
         <MapContainer center={[4.5709, -74.2973]} zoom={5} zoomControl={false} style={{ height: '100%', width: '100%', borderRadius: '1rem', zIndex: 0 }} className="border border-slate-200 shadow-sm">
-          <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" subdomains="abcd" />
+          <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" subdomains="abc" />
           <FlyTo center={flyCenter} />
           {cityStats.map((s) => (
             <Marker key={s.city} position={cityCoords(s.city)} icon={cityIcon(s)}>
