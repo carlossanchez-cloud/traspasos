@@ -18,11 +18,22 @@ create table profiles (
 
 alter table profiles enable row level security;
 
+-- is_admin() evita la recursion infinita que da un `exists (select ... from profiles)`
+-- dentro de una policy de la propia tabla profiles (Postgres re-evalua la policy para
+-- las filas del subquery). security definer = consulta sin pasar por RLS, solo mira
+-- la fila del usuario actual.
+create function is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (select 1 from profiles where id = auth.uid() and role = 'admin');
+$$;
+
 create policy "profiles: ver propio o si admin" on profiles
-  for select using (
-    id = auth.uid()
-    or exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'admin')
-  );
+  for select using (id = auth.uid() or is_admin());
 
 -- Trigger: al crear un usuario de Auth, solo se crea perfil si el correo es @rentandes.com.
 -- Sin @rentandes.com -> usuario queda autenticado pero SIN perfil -> RLS de todas las tablas
@@ -271,11 +282,7 @@ create policy "actas storage: subir si hay perfil" on storage.objects
 -- 8. PROFILES — permitir que un admin cambie el rol de otro usuario (pantalla Admin > Usuarios).
 -- ============================================================
 create policy "profiles: admin actualiza roles" on profiles
-  for update to authenticated using (
-    exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'admin')
-  ) with check (
-    exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'admin')
-  );
+  for update to authenticated using (is_admin()) with check (is_admin());
 
 -- ============================================================
 -- 9. RESOLVER SOLICITUD — asignar vehiculo + cerrar solicitud en una sola transaccion.

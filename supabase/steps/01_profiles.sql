@@ -12,11 +12,21 @@ create table profiles (
 
 alter table profiles enable row level security;
 
+-- is_admin() evita "infinite recursion detected in policy for relation profiles":
+-- un exists(select ... from profiles) DENTRO de una policy de profiles se re-evalua
+-- a si mismo. security definer = consulta sin pasar por RLS, solo mira al usuario actual.
+create function is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (select 1 from profiles where id = auth.uid() and role = 'admin');
+$$;
+
 create policy "profiles: ver propio o si admin" on profiles
-  for select using (
-    id = auth.uid()
-    or exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'admin')
-  );
+  for select using (id = auth.uid() or is_admin());
 
 create function handle_new_user()
 returns trigger
