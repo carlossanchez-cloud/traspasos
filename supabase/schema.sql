@@ -266,3 +266,56 @@ create policy "actas storage: subir si hay perfil" on storage.objects
   for insert to authenticated with check (
     bucket_id = 'actas' and exists (select 1 from profiles where id = auth.uid())
   );
+
+-- ============================================================
+-- 8. PROFILES — permitir que un admin cambie el rol de otro usuario (pantalla Admin > Usuarios).
+-- ============================================================
+create policy "profiles: admin actualiza roles" on profiles
+  for update to authenticated using (
+    exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'admin')
+  ) with check (
+    exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
+
+-- ============================================================
+-- 9. RESOLVER SOLICITUD — asignar vehiculo + cerrar solicitud en una sola transaccion.
+-- ============================================================
+create function resolve_solicitud(p_solicitud_id uuid, p_placa text)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  s solicitudes;
+begin
+  if not exists (select 1 from profiles where id = auth.uid() and role = 'admin') then
+    raise exception 'Solo un administrador puede resolver solicitudes';
+  end if;
+
+  select * into s from solicitudes where id = p_solicitud_id and estado = 'Pendiente';
+  if not found then
+    raise exception 'Solicitud no existe o ya fue resuelta';
+  end if;
+
+  if not exists (select 1 from vehicles where placa = p_placa and estado = 'Disponible') then
+    raise exception 'El vehiculo % ya no esta disponible', p_placa;
+  end if;
+
+  update vehicles set
+    estado = 'Asignado',
+    cliente = s.cliente_empresa,
+    admin_flota = s.admin_flota,
+    fecha_inicio = s.fecha_inicio,
+    fecha_fin = s.fecha_fin,
+    placa_sustituida = s.placa_contrato,
+    novedades_asignacion = s.observaciones
+  where placa = p_placa;
+
+  update solicitudes set
+    estado = 'Resuelta',
+    vehiculo_asignado_placa = p_placa,
+    resuelta_por = auth.uid(),
+    resuelta_at = now()
+  where id = p_solicitud_id;
+end;
+$$;

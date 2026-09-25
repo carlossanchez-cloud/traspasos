@@ -6,6 +6,7 @@ import { formatDate, formatKM, isExpired, STATUS_STYLE, todayISO } from '../lib/
 import { useToast } from '../lib/useToast'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
+import MaintenancePanel from '../components/MaintenancePanel'
 
 const EMPTY_FORM = {
   placa: '', modelo: '', tipo_vehiculo: 'Automóvil', ciudad: '', estado: 'Disponible',
@@ -87,7 +88,8 @@ export default function Dashboard() {
     }
     setSaving(true)
     const payload = { ...form, placa: form.placa.toUpperCase() }
-    delete payload.id; delete payload.created_at; delete payload.updated_at; delete payload.fecha_estado; delete payload.mto_detalle
+    delete payload.id; delete payload.created_at; delete payload.updated_at; delete payload.fecha_estado
+    if (isAdding) delete payload.mto_detalle
     const { error } = isAdding
       ? await supabase.from('vehicles').insert(payload)
       : await supabase.from('vehicles').update(payload).eq('id', selected.id)
@@ -181,6 +183,16 @@ export default function Dashboard() {
       {(isAdding || isEditing) && (
         <Modal title={isAdding ? 'Nuevo vehículo' : `Editar ${form.placa}`} onClose={closeForm} wide>
           <VehicleForm form={form} setForm={setForm} ciudades={ciudades} readOnly={!isAdmin} />
+          {isEditing && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <MaintenancePanel
+                detalle={form.mto_detalle}
+                kmActual={Number(form.km_actual) || 0}
+                onChange={(next) => setForm((f) => ({ ...f, mto_detalle: next }))}
+                readOnly={!isAdmin}
+              />
+            </div>
+          )}
           {isAdmin && (
             <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
               {isEditing ? (

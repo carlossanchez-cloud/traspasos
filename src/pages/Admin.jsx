@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
 import { useToast } from '../lib/useToast'
 import Toast from '../components/Toast'
 
 export default function Admin() {
+  const { profile } = useAuth()
   const { toast, notify, clear } = useToast()
   const [ciudades, setCiudades] = useState([])
   const [nueva, setNueva] = useState('')
+  const [usuarios, setUsuarios] = useState([])
 
-  const load = () => supabase.from('ciudades').select('nombre').order('nombre').then(({ data }) => setCiudades((data || []).map((r) => r.nombre)))
+  const load = () => {
+    supabase.from('ciudades').select('nombre').order('nombre').then(({ data }) => setCiudades((data || []).map((r) => r.nombre)))
+    supabase.from('profiles').select('*').order('email').then(({ data }) => setUsuarios(data || []))
+  }
   useEffect(() => { load() }, [])
 
   const agregar = async () => {
@@ -19,6 +25,15 @@ export default function Admin() {
     const { error } = await supabase.from('ciudades').insert({ nombre: cased })
     if (error) { notify('Error: ' + error.message, 'error'); return }
     setNueva(''); load()
+  }
+
+  const cambiarRol = async (u) => {
+    if (u.id === profile.id) { notify('No puedes cambiar tu propio rol (evita quedarte sin acceso admin).', 'error'); return }
+    const nuevoRol = u.role === 'admin' ? 'gestor' : 'admin'
+    const { error } = await supabase.from('profiles').update({ role: nuevoRol }).eq('id', u.id)
+    if (error) { notify('Error: ' + error.message, 'error'); return }
+    notify(`${u.email} ahora es ${nuevoRol}.`, 'success')
+    load()
   }
 
   return (
@@ -41,11 +56,31 @@ export default function Admin() {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl p-5">
-        <h2 className="text-sm font-black text-slate-500 uppercase mb-2">Usuarios y roles</h2>
-        <p className="text-sm text-slate-500">
-          Los roles (admin/gestor) se asignan en la tabla <code className="text-xs bg-slate-100 px-1 py-0.5 rounded">profiles</code> de
-          Supabase (Table Editor), no desde aquí — solo entra quien tenga correo @rentandes.com.
-        </p>
+        <h2 className="text-sm font-black text-slate-500 uppercase mb-3">Usuarios y roles</h2>
+        <p className="text-xs text-slate-400 mb-3">Solo entra quien tenga correo @rentandes.com. Aparecen aquí en cuanto inician sesión por primera vez.</p>
+        {usuarios.length === 0 ? (
+          <p className="text-sm text-slate-400">Todavía nadie más ha iniciado sesión.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {usuarios.map((u) => (
+              <div key={u.id} className="flex items-center justify-between p-2.5 border border-slate-100 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-slate-700">{u.email}{u.id === profile.id && <span className="text-slate-400 font-normal"> (tú)</span>}</p>
+                  <p className="text-[11px] text-slate-400">{u.full_name || 'sin nombre'}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${u.role === 'admin' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                    {u.role}
+                  </span>
+                  <button onClick={() => cambiarRol(u)} disabled={u.id === profile.id}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
+                    {u.role === 'admin' ? 'Bajar a gestor' : 'Subir a admin'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <Toast {...toast} onClose={clear} />

@@ -6,6 +6,8 @@ import { formatDate, todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
+import SignaturePad from '../components/SignaturePad'
+import ActaPhotos from '../components/ActaPhotos'
 
 const CHECK_ITEMS = ['Carrocería', 'Llantas', 'Interior', 'Luces', 'Documentos en el vehículo']
 const ESTADOS = ['Bueno', 'Regular', 'Malo']
@@ -27,6 +29,7 @@ export default function Actas() {
   const [fotos, setFotos] = useState([])
   const [firma, setFirma] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [viewing, setViewing] = useState(null)
 
   const load = async () => {
     const [{ data: v }, { data: a }] = await Promise.all([
@@ -98,14 +101,14 @@ export default function Actas() {
       ) : (
         <div className="flex flex-col gap-2">
           {actas.map((a) => (
-            <div key={a.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between">
+            <button key={a.id} onClick={() => setViewing(a)} className="text-left bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between hover:border-slate-300 hover:shadow-sm transition-all">
               <div>
                 <p className="font-bold text-slate-800 text-sm">
                   <span className="font-mono">{a.placa}</span> — {a.tipo} — {a.cliente}
                 </p>
                 <p className="text-xs text-slate-500">{formatDate(a.fecha)} · {a.conductor || 'sin conductor registrado'} · {a.fotos_urls?.length || 0} foto(s){a.firma_url ? ' · con firma' : ''}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -166,13 +169,10 @@ export default function Actas() {
                 setFotos(valid)
               }} className="text-xs mt-1" />
             </Field>
-            <Field label="Firma (foto o imagen, max 8MB)">
-              <input type="file" accept="image/*" onChange={(e) => {
-                const f = e.target.files[0]
-                if (f && !isValidImage(f)) { notify('La firma debe ser una imagen de máximo 8MB.', 'error'); e.target.value = ''; setFirma(null); return }
-                setFirma(f || null)
-              }} className="text-xs mt-1" />
-            </Field>
+          </div>
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Firma del cliente</p>
+            <SignaturePad onChange={setFirma} />
           </div>
           <div className="mt-2">
             <Field label="Observaciones generales"><textarea value={form.observaciones} onChange={set('observaciones')} rows={2} className={inputCls} /></Field>
@@ -183,6 +183,12 @@ export default function Actas() {
               {saving ? 'Guardando...' : 'Guardar acta'}
             </button>
           </div>
+        </Modal>
+      )}
+
+      {viewing && (
+        <Modal title={`${viewing.placa} — ${viewing.tipo} — ${formatDate(viewing.fecha)}`} onClose={() => setViewing(null)}>
+          <ActaPhotos acta={viewing} />
         </Modal>
       )}
 

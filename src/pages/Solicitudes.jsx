@@ -58,17 +58,12 @@ export default function Solicitudes() {
 
   const resolver = async () => {
     if (!placaElegida) return
-    const v = candidatos.find((c) => c.placa === placaElegida)
-    const { error: e1 } = await supabase.from('vehicles').update({
-      estado: 'Asignado', cliente: resolving.cliente_empresa, admin_flota: resolving.admin_flota,
-      fecha_inicio: resolving.fecha_inicio, fecha_fin: resolving.fecha_fin,
-      placa_sustituida: resolving.placa_contrato, novedades_asignacion: resolving.observaciones,
-    }).eq('id', v.id)
-    if (e1) { notify('Error asignando vehículo: ' + e1.message, 'error'); return }
-    const { error: e2 } = await supabase.from('solicitudes').update({
-      estado: 'Resuelta', vehiculo_asignado_placa: placaElegida, resuelta_at: new Date().toISOString(),
-    }).eq('id', resolving.id)
-    if (e2) notify('Vehículo asignado, pero no se pudo cerrar la solicitud: ' + e2.message, 'error')
+    // RPC atomica (supabase/steps/10_resolve_solicitud_rpc.sql): asigna el vehiculo y cierra
+    // la solicitud en una sola transaccion, no en 2 updates separados desde el cliente.
+    const { error } = await supabase.rpc('resolve_solicitud', {
+      p_solicitud_id: resolving.id, p_placa: placaElegida,
+    })
+    if (error) notify('Error asignando: ' + error.message, 'error')
     else notify(`${placaElegida} asignado a ${resolving.cliente_empresa}.`, 'success')
     setResolving(null)
     loadSolicitudes()

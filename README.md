@@ -4,9 +4,10 @@ Migración del prototipo HTML de Alejo (React+Tailwind client-only, localStorage
 
 ## Estado
 
-App funcional en el código (dashboard, mapa, solicitudes, actas, informes, admin), auth con Google restringido a
-`@rentandes.com`, esquema SQL completo con RLS. **Falta que Carlos cree el proyecto de Supabase y complete la
-configuración** — no se puede probar en vivo hasta ese paso.
+App funcional en el código (dashboard, mapa, solicitudes, actas con firma/fotos, informes, admin con gestión de
+roles), auth con Google restringido a `@rentandes.com`, esquema SQL completo con RLS, 12 tests unitarios pasando.
+**Falta que Carlos cree el proyecto de Supabase y complete la configuración** — no se puede probar en vivo hasta
+ese paso.
 
 ## 1. Crear el proyecto Supabase (paso a paso, sin saltarse nada)
 
@@ -45,6 +46,9 @@ En Supabase: menú izquierdo → **SQL Editor** → botón **New query**.
    anterior). Un archivo nuevo (**New query**) por paso, para no mezclar.
 3. Por último `08_seed.sql` — carga los 24 vehículos reales que ya tenía Alejo. Al terminar, ve a **Table Editor**
    (menú izquierdo) → tabla `vehicles` → deberías ver 24 filas.
+4. `09_profiles_admin_update.sql` y `10_resolve_solicitud_rpc.sql` — se agregaron después del primer intento, dos
+   piezas chicas (gestión de roles desde la app, asignación de solicitud atómica). Si ya corriste el paso 1-8 antes
+   de esta actualización del repo, solo te falta correr estos 2 archivos nuevos, no hay que repetir nada.
 
 Si en algún paso te vuelve a salir un error, cópiame el mensaje completo (el texto rojo) y te digo exactamente qué
 pasó — no lo reintentes a ciegas.
@@ -84,32 +88,42 @@ Menú izquierdo → **Settings** → **API**. Vas a necesitar dos valores para e
 
 ## 3. Roles
 
-No hay UI de gestión de usuarios todavía (no se construyó, ver "Qué falta"). El trigger `handle_new_user` en
-`schema.sql` asigna `admin` automáticamente a los dos correos que edites en el paso 1; cualquier otro
-`@rentandes.com` que inicie sesión entra como `gestor`. Para subir a alguien a admin después, editarlo a mano en
-Supabase → Table Editor → `profiles`.
+El trigger `handle_new_user` asigna `admin` automáticamente a los dos correos que edites en el paso 1.1; cualquier
+otro `@rentandes.com` que inicie sesión entra como `gestor`. Para cambiar el rol de alguien después: pantalla
+**Administrador → Usuarios y roles** dentro de la app (necesita el paso SQL `09_profiles_admin_update.sql`), o a
+mano en Supabase → Table Editor → `profiles` si prefieres.
 
 ## 4. Deploy
 
 No configurado todavía. Más simple: Vercel o Netlify conectado al repo de GitHub, variables de entorno
 `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` en su dashboard. `npm run build` genera `dist/`.
 
+## Qué se agregó después de la primera entrega (2026-09-25)
+
+- **Gestión de roles vía UI** — Admin → Usuarios y roles, sube/baja admin↔gestor. No puedes cambiar tu propio rol
+  (evita quedarte bloqueado sin querer). Requiere el paso SQL `09_profiles_admin_update.sql`.
+- **Firma digital con canvas** — Actas ahora captura la firma dibujada en pantalla (dedo o mouse), no una foto subida.
+- **Visor de fotos de actas** — clic en una acta abre sus fotos y firma (URLs firmadas de 1h, el bucket sigue privado).
+- **Mantenimiento detallado por ítem** — aceite/llantas/frenos/filtros con % de desgaste ponderado (aceite pesa
+  más), editable desde el modal de edición de un vehículo.
+- **Resolución de solicitud atómica** — ahora es una función RPC de Postgres (`resolve_solicitud`, ver
+  `10_resolve_solicitud_rpc.sql`) en vez de 2 updates seguidos desde el cliente.
+- **Validación de archivos en Actas** — solo imágenes, máx 8MB c/u (encontrado real al revisar seguridad, ver abajo).
+
 ## Qué falta (a propósito, no es descuido)
 
-- **Gestión de usuarios/roles vía UI** — hoy se hace a mano en Supabase. Agregar si el equipo crece.
-- **Firma digital con canvas** — hoy Actas acepta subir una foto/imagen de firma, no un pad de firma en pantalla.
-- **Visor de fotos de actas** — se suben y quedan en Storage (bucket privado `actas`), pero no hay galería para
-  verlas dentro de la app todavía (se pueden ver desde el dashboard de Supabase Storage mientras tanto).
-- **Módulo financiero** (costos por vehículo/parqueadero/traslado) — mencionado en la reunión como fase futura, no
-  se construyó.
-- **Mantenimiento detallado por ítem** (aceite/llantas/frenos con % ponderado) — la tabla `vehicles` tiene la
-  columna `mto_detalle jsonb` lista para esto, pero no hay UI todavía.
-- La resolución de una solicitud (asignar vehículo) hace 2 escrituras seguidas desde el cliente (vehículo +
-  solicitud), no es atómica. Para 24 vehículos y 1-2 admins el riesgo de carrera es bajo; si crece, mover a una
-  función RPC de Postgres.
+- **Módulo financiero** (costos por vehículo/parqueadero/traslado) — la propia reunión lo marcó como fase futura,
+  no una necesidad de ahora. No construido a propósito.
+- **Deploy** — ver sección 4, necesita que Carlos conecte su cuenta de Vercel/Netlify.
 
 ## Seguridad
 
 - El PIN hardcodeado del prototipo (`3899`) no existe aquí — reemplazado por Google OAuth + Row Level Security.
   Sin fila en `profiles` (dominio no autorizado) = sin acceso a ninguna tabla, verificado por RLS en cada policy.
-- Fotos y firmas de actas van a un bucket **privado** de Storage, no público.
+- Fotos y firmas de actas van a un bucket **privado** de Storage, no público — se ven con URLs firmadas de corta
+  duración, no con enlaces permanentes.
+- Se corrió un escaneo con Strix (white-box) el 2026-09-25: el primer intento (modelo `gemini-2.5-pro`, no
+  recomendado por la propia herramienta) alucinó los 4 hallazgos — citaban archivos, tablas y dominios que no
+  existen en este repo. Se descartaron todos. Al revisar el código real a mano por las mismas 4 categorías, el
+  único hallazgo genuino era la falta de validación de archivos en Actas, ya corregida arriba. Pendiente: repetir
+  el escaneo con un modelo recomendado (Anthropic/OpenAI) o Strix Cloud para tener una pasada confiable.
