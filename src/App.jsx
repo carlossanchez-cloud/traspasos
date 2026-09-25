@@ -55,7 +55,7 @@ function Shell({ children }) {
 }
 
 function Gate({ children }) {
-  const { session, profile, loading, signOut } = useAuth()
+  const { session, profile, profileError, loading, signOut } = useAuth()
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Cargando...</div>
   if (!session) return <Login />
@@ -64,8 +64,10 @@ function Gate({ children }) {
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-sm text-center bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <Icon name="AlertTriangle" className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-          <p className="font-bold text-slate-800">Acceso no autorizado</p>
-          <p className="text-sm text-slate-500 mt-1">Este portal es solo para correos @rentandes.com.</p>
+          <p className="font-bold text-slate-800">{profileError ? 'Error consultando tu perfil' : 'Acceso no autorizado'}</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {profileError ? profileError : 'Este portal es solo para correos @rentandes.com.'}
+          </p>
           <button onClick={signOut} className="mt-4 text-sm font-bold text-emerald-700 hover:underline">Volver a intentar</button>
         </div>
       </div>
