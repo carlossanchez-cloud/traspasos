@@ -10,9 +10,10 @@ export const MTO_ITEMS = [
 
 export function itemPct(item, detalle, kmActual) {
   const d = detalle?.[item.key]
-  if (!d || !d.frecuencia) return 0
+  if (!d) return 0
+  const frecuencia = d.frecuencia || item.defaultFrecuencia
   const recorrido = Math.max(0, (kmActual || 0) - (d.km || 0))
-  return Math.min(100, Math.round((recorrido / d.frecuencia) * 100))
+  return Math.min(100, Math.round((recorrido / frecuencia) * 100))
 }
 
 export function overallMtoPct(detalle, kmActual) {
