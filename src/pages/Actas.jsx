@@ -13,6 +13,9 @@ const ESTADOS = ['Bueno', 'Regular', 'Malo']
 const emptyChecklist = () => Object.fromEntries(CHECK_ITEMS.map((k) => [k, { estado: 'Bueno', obs: '' }]))
 const EMPTY = { tipo: 'Entrega', placa: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
 
+const MAX_FILE_BYTES = 8 * 1024 * 1024 // 8MB — fotos de celular normales caben, evita subir cualquier cosa gigante
+const isValidImage = (file) => file.type.startsWith('image/') && file.size <= MAX_FILE_BYTES
+
 export default function Actas() {
   const { profile } = useAuth()
   const { toast, notify, clear } = useToast()
@@ -155,8 +158,21 @@ export default function Actas() {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3 mt-4">
-            <Field label="Fotos (4-6)"><input type="file" accept="image/*" multiple onChange={(e) => setFotos([...e.target.files])} className="text-xs mt-1" /></Field>
-            <Field label="Firma (foto o imagen)"><input type="file" accept="image/*" onChange={(e) => setFirma(e.target.files[0] || null)} className="text-xs mt-1" /></Field>
+            <Field label="Fotos (4-6, imagen, max 8MB c/u)">
+              <input type="file" accept="image/*" multiple onChange={(e) => {
+                const files = [...e.target.files]
+                const valid = files.filter(isValidImage)
+                if (valid.length < files.length) notify('Algunas fotos no son imágenes válidas o pesan más de 8MB — se omitieron.', 'error')
+                setFotos(valid)
+              }} className="text-xs mt-1" />
+            </Field>
+            <Field label="Firma (foto o imagen, max 8MB)">
+              <input type="file" accept="image/*" onChange={(e) => {
+                const f = e.target.files[0]
+                if (f && !isValidImage(f)) { notify('La firma debe ser una imagen de máximo 8MB.', 'error'); e.target.value = ''; setFirma(null); return }
+                setFirma(f || null)
+              }} className="text-xs mt-1" />
+            </Field>
           </div>
           <div className="mt-2">
             <Field label="Observaciones generales"><textarea value={form.observaciones} onChange={set('observaciones')} rows={2} className={inputCls} /></Field>
