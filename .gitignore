@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .env
+strix_runs/
 
 # Editor directories and files
 .vscode/*
