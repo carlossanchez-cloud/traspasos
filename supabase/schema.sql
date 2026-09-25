@@ -1,4 +1,7 @@
--- Portal Sustitutos — schema inicial. Pegar completo en Supabase Dashboard > SQL Editor > Run.
+-- Portal Sustitutos — schema completo, de referencia.
+-- Si es tu primera vez configurando esto, NO uses este archivo: usa supabase/steps/01..08
+-- (mismo contenido partido en pasos chicos, con instrucciones en el README). Este archivo
+-- sirve para copiar todo de una vez cuando ya sabes que el SQL funciona (ej. otro ambiente).
 -- Orden importa (profiles antes que las tablas que la referencian).
 
 -- ============================================================
