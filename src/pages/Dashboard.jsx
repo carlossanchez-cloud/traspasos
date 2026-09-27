@@ -174,16 +174,15 @@ export default function Dashboard() {
             return (
               <div key={v.id} role="button" tabIndex={0} onClick={() => openEdit(v)}
                 onKeyDown={(e) => { if (e.key === 'Enter') openEdit(v) }}
-                className="text-left bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all cursor-pointer">
+                className="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all cursor-pointer">
+                <div className="bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center px-4 pt-4 pb-2">
+                  <VehicleTypeIcon tipo={v.tipo_vehiculo} className="w-full h-20" />
+                </div>
+                <div className="p-4">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 bg-slate-50 rounded-xl p-2">
-                      <VehicleTypeIcon tipo={v.tipo_vehiculo} className="w-12 h-8" />
-                    </div>
-                    <div>
-                      <p className="font-mono font-bold text-slate-800">{v.placa}</p>
-                      <p className="text-xs text-slate-500 truncate max-w-[150px]" title={v.modelo}>{v.modelo}</p>
-                    </div>
+                  <div>
+                    <p className="font-mono font-bold text-slate-800">{v.placa}</p>
+                    <p className="text-xs text-slate-500 truncate max-w-[150px]" title={v.modelo}>{v.modelo}</p>
                   </div>
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${style.badge}`}>{v.estado}</span>
                 </div>
@@ -201,6 +200,7 @@ export default function Dashboard() {
                     className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:underline">
                     <Icon name="FileText" className="w-3.5 h-3.5" /> Ver ficha
                   </Link>
+                </div>
                 </div>
               </div>
             )

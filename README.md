@@ -130,6 +130,6 @@ No configurado todavía. Más simple: Vercel o Netlify conectado al repo de GitH
 
 ## Créditos de terceros
 
-- Ilustraciones de tipo de vehículo (`src/components/VehicleTypeIcon.jsx`): basadas en los emoji de coche/todoterreno/pickup
-  de [Twemoji](https://github.com/twitter/twemoji) (Twitter, Inc. y colaboradores), licencia **CC-BY 4.0**, recoloreadas
-  a la paleta neutra de la app.
+- Renders de tipo de vehículo (`src/assets/vehicles/*.png`, usados por `VehicleTypeIcon.jsx`): generados con
+  **Gemini 2.5 Flash Image** ("Nano Banana", API de Google) a partir de un prompt propio ("render 3D genérico
+  sin marca/logo"), no son fotos ni modelos 3D de ningún fabricante real.

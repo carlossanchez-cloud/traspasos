@@ -68,16 +68,15 @@ export default function Ficha() {
         </button>
       </div>
 
-      <div ref={printRef} className="bg-white border border-slate-200 rounded-2xl p-6">
+      <div ref={printRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="bg-gradient-to-b from-slate-50 to-slate-100 px-6 pt-6 pb-2 flex justify-center">
+          <VehicleTypeIcon tipo={vehicle.tipo_vehiculo} className="w-full h-32" />
+        </div>
+        <div className="p-6">
         <div className="flex items-start justify-between pb-4 mb-4 border-b border-slate-100">
-          <div className="flex items-center gap-4">
-            <div className="bg-slate-50 rounded-xl p-3">
-              <VehicleTypeIcon tipo={vehicle.tipo_vehiculo} className="w-20 h-14" />
-            </div>
-            <div>
-              <p className="font-mono font-black text-2xl text-slate-800">{vehicle.placa}</p>
-              <p className="text-sm text-slate-500">{vehicle.modelo} &middot; {vehicle.tipo_vehiculo}</p>
-            </div>
+          <div>
+            <p className="font-mono font-black text-2xl text-slate-800">{vehicle.placa}</p>
+            <p className="text-sm text-slate-500">{vehicle.modelo} &middot; {vehicle.tipo_vehiculo}</p>
           </div>
           <div className="text-right shrink-0">
             <img src="/rentandes-logo.png" alt="rentandes" className="h-5 w-auto mb-2 ml-auto" />
@@ -118,6 +117,7 @@ export default function Ficha() {
 
         <div className="mt-4 pt-4 border-t border-slate-100">
           <MaintenancePanel detalle={vehicle.mto_detalle} kmActual={vehicle.km_actual} onChange={() => {}} readOnly />
+        </div>
         </div>
       </div>
     </div>
