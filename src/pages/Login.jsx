@@ -5,7 +5,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
       <div className="max-w-sm w-full bg-white border border-slate-200 rounded-2xl shadow-sm p-8 text-center">
-        <img src="/rentandes-icon.png" alt="rentandes" className="w-14 h-14 mx-auto mb-4" />
+        <img src="/rentandes-icon.png" alt="rentandes" className="h-14 w-auto mx-auto mb-4" />
         <h1 className="text-lg font-bold text-slate-800">Flota Sustitutos</h1>
         <p className="text-sm text-slate-500 mt-1 mb-6">Gestión de vehículos sustitutos de Rentandes.</p>
         <button
