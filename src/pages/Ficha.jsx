@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Icon } from '../lib/icons'
 import { formatDate, formatKM, isExpired, STATUS_STYLE } from '../lib/format'
 import { overallMtoPct } from '../lib/maintenance'
-import VehicleTypeIcon from '../components/VehicleTypeIcon'
+import VehiclePhoto from '../components/VehiclePhoto'
 import MaintenancePanel from '../components/MaintenancePanel'
 import Spinner from '../components/Spinner'
 import { ButtonSpinner } from '../components/Spinner'
@@ -70,7 +70,7 @@ export default function Ficha() {
 
       <div ref={printRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="bg-gradient-to-b from-slate-50 to-slate-100 px-6 pt-6 pb-2 flex justify-center">
-          <VehicleTypeIcon tipo={vehicle.tipo_vehiculo} className="w-full h-32" />
+          <VehiclePhoto placa={vehicle.placa} tipo={vehicle.tipo_vehiculo} className="w-full h-32" />
         </div>
         <div className="p-6">
         <div className="flex items-start justify-between pb-4 mb-4 border-b border-slate-100">

@@ -8,7 +8,7 @@ import { useToast } from '../lib/useToast'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import MaintenancePanel from '../components/MaintenancePanel'
-import VehicleTypeIcon from '../components/VehicleTypeIcon'
+import VehiclePhoto from '../components/VehiclePhoto'
 import { ButtonSpinner } from '../components/Spinner'
 
 const EMPTY_FORM = {
@@ -176,7 +176,7 @@ export default function Dashboard() {
                 onKeyDown={(e) => { if (e.key === 'Enter') openEdit(v) }}
                 className="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all cursor-pointer">
                 <div className="bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center px-4 pt-4 pb-2">
-                  <VehicleTypeIcon tipo={v.tipo_vehiculo} className="w-full h-20" />
+                  <VehiclePhoto placa={v.placa} tipo={v.tipo_vehiculo} className="w-full h-20" />
                 </div>
                 <div className="p-4">
                 <div className="flex items-start justify-between">

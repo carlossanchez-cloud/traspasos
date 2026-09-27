@@ -130,6 +130,10 @@ No configurado todavía. Más simple: Vercel o Netlify conectado al repo de GitH
 
 ## Créditos de terceros
 
-- Renders de tipo de vehículo (`src/assets/vehicles/*.png`, usados por `VehicleTypeIcon.jsx`): generados con
-  **Gemini 2.5 Flash Image** ("Nano Banana", API de Google) a partir de un prompt propio ("render 3D genérico
-  sin marca/logo"), no son fotos ni modelos 3D de ningún fabricante real.
+- Renders de vehículo, tanto el genérico por tipo (`src/assets/vehicles/*.png`, `VehicleTypeIcon.jsx`) como el
+  real por placa (`src/assets/vehicles/fleet/*.png`, `VehiclePhoto.jsx`/`fleetPhotos.js`): generados con
+  **Gemini 2.5 Flash Image** ("Nano Banana", API de Google) a partir de prompts propios describiendo cada
+  marca/modelo real de la flota (extraídos de `supabase/seed.sql`). No son fotos reales de los 24 vehículos
+  físicos ni modelos 3D con licencia del fabricante — son renders genéricos que representan correctamente
+  marca/modelo/año/tipo de carrocería. Placas con el mismo modelo real comparten una sola imagen (evita pagar
+  generaciones repetidas de un carro idéntico).
