@@ -9,15 +9,7 @@ import VehiclePhoto from '../components/VehiclePhoto'
 import MaintenancePanel from '../components/MaintenancePanel'
 import Spinner from '../components/Spinner'
 import { ButtonSpinner } from '../components/Spinner'
-
-function Row({ label, value, warn }) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-      <span className="text-xs font-bold text-slate-400 uppercase">{label}</span>
-      <span className={`text-sm font-semibold ${warn ? 'text-red-600' : 'text-slate-700'}`}>{value}</span>
-    </div>
-  )
-}
+import Row from '../components/Row'
 
 export default function Ficha() {
   const { id } = useParams()
@@ -71,7 +63,7 @@ export default function Ficha() {
 
       <div ref={printRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="bg-gradient-to-b from-slate-50 to-slate-100 px-6 pt-6 pb-2 flex justify-center">
-          <VehiclePhoto placa={vehicle.placa} tipo={vehicle.tipo_vehiculo} className="w-full h-32" />
+          <VehiclePhoto vehicle={vehicle} className="w-full h-32" />
         </div>
         <div className="p-6">
         <div className="flex items-start justify-between pb-4 mb-4 border-b border-slate-100">

@@ -9,6 +9,7 @@ import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import MaintenancePanel from '../components/MaintenancePanel'
 import VehiclePhoto from '../components/VehiclePhoto'
+import FleetCharts from '../components/FleetCharts'
 import { ButtonSpinner } from '../components/Spinner'
 
 const EMPTY_FORM = {
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [toDelete, setToDelete] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [fotoFile, setFotoFile] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -83,9 +85,10 @@ export default function Dashboard() {
 
   const openAdd = () => {
     setForm({ ...EMPTY_FORM, ciudad: ciudades[0] || '' })
+    setFotoFile(null)
     setIsAdding(true)
   }
-  const openEdit = (v) => { setForm({ ...v }); setSelected(v); setIsEditing(true) }
+  const openEdit = (v) => { setForm({ ...v }); setSelected(v); setFotoFile(null); setIsEditing(true) }
   const closeForm = () => { setIsAdding(false); setIsEditing(false); setSelected(null) }
 
   const save = async () => {
@@ -97,6 +100,12 @@ export default function Dashboard() {
     const payload = { ...form, placa: form.placa.toUpperCase() }
     delete payload.id; delete payload.created_at; delete payload.updated_at; delete payload.fecha_estado
     if (isAdding) delete payload.mto_detalle
+    if (fotoFile) {
+      const path = `vehiculos/${payload.placa}/foto-${Date.now()}-${fotoFile.name}`
+      const { error: uploadError } = await supabase.storage.from('actas').upload(path, fotoFile)
+      if (uploadError) { setSaving(false); notify('Error subiendo la foto: ' + uploadError.message, 'error'); return }
+      payload.foto_path = path
+    }
     const { error } = isAdding
       ? await supabase.from('vehicles').insert(payload)
       : await supabase.from('vehicles').update(payload).eq('id', selected.id)
@@ -135,6 +144,8 @@ export default function Dashboard() {
         <StatCard label="Asignados" value={stats.asignados} tone="text-blue-600" bar="bg-blue-500" icon="User" />
         <StatCard label="En taller" value={stats.taller} tone="text-red-600" bar="bg-red-500" icon="Wrench" />
       </div>
+
+      <FleetCharts vehicles={vehicles} />
 
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <div className="relative flex-1">
@@ -176,7 +187,7 @@ export default function Dashboard() {
                 onKeyDown={(e) => { if (e.key === 'Enter') openEdit(v) }}
                 className="text-left bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all cursor-pointer">
                 <div className="bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center px-4 pt-4 pb-2">
-                  <VehiclePhoto placa={v.placa} tipo={v.tipo_vehiculo} className="w-full h-20" />
+                  <VehiclePhoto vehicle={v} className="w-full h-20" />
                 </div>
                 <div className="p-4">
                 <div className="flex items-start justify-between">
@@ -211,6 +222,23 @@ export default function Dashboard() {
       {(isAdding || isEditing) && (
         <Modal title={isAdding ? 'Nuevo vehículo' : `Editar ${form.placa}`} onClose={closeForm} wide>
           <VehicleForm form={form} setForm={setForm} ciudades={ciudades} readOnly={!isAdmin} />
+          {isAdmin && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                Foto real del vehículo (opcional, reemplaza el render genérico)
+              </label>
+              <input type="file" accept="image/*" onChange={(e) => {
+                const file = e.target.files[0]
+                if (!file) return
+                if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) {
+                  notify('La foto debe ser una imagen de máximo 8MB.', 'error')
+                  return
+                }
+                setFotoFile(file)
+              }} className="text-xs" />
+              {fotoFile && <p className="text-xs text-emerald-700 mt-1">{fotoFile.name} — se sube al guardar.</p>}
+            </div>
+          )}
           {isEditing && (
             <div className="mt-4 pt-4 border-t border-slate-100">
               <MaintenancePanel

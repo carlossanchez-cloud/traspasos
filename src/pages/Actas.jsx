@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
-import { formatDate, todayISO } from '../lib/format'
+import { formatDate, formatKM, todayISO } from '../lib/format'
+import { pdfOrientation } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
+import Row from '../components/Row'
 import SignaturePad from '../components/SignaturePad'
 import ActaPhotos from '../components/ActaPhotos'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
@@ -37,6 +39,8 @@ export default function Actas() {
   const [saving, setSaving] = useState(false)
   const [viewing, setViewing] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const printRef = useRef(null)
 
   const load = async () => {
     setLoading(true)
@@ -91,6 +95,23 @@ export default function Actas() {
       notify('Error guardando acta: ' + err.message, 'error')
     }
     setSaving(false)
+  }
+
+  const downloadPDF = async () => {
+    setExporting(true)
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas-pro'),
+        import('jspdf'),
+      ])
+      const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+      const img = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({ orientation: pdfOrientation(canvas.width, canvas.height), unit: 'px', format: [canvas.width, canvas.height] })
+      pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height)
+      pdf.save(`Acta_${viewing.placa}_${viewing.fecha}.pdf`)
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -200,7 +221,41 @@ export default function Actas() {
 
       {viewing && (
         <Modal title={`${viewing.placa} — ${viewing.tipo} — ${formatDate(viewing.fecha)}`} onClose={() => setViewing(null)}>
-          <ActaPhotos acta={viewing} />
+          <div ref={printRef} className="bg-white">
+            <Row label="Cliente" value={viewing.cliente} />
+            <Row label="Conductor" value={viewing.conductor || '-'} />
+            <Row label="Kilometraje" value={viewing.kilometraje ? formatKM(viewing.kilometraje) : '-'} />
+            <Row label="Combustible" value={viewing.nivel_combustible} />
+            <div className="mt-4">
+              <p className="text-xs font-bold text-slate-500 uppercase mb-2">Checklist</p>
+              <div className="flex flex-col gap-1.5">
+                {CHECK_ITEMS.map((item) => {
+                  const c = viewing.checklist?.[item]
+                  if (!c) return null
+                  return (
+                    <div key={item} className="flex items-center justify-between text-sm border-b border-slate-100 pb-1.5">
+                      <span className="text-slate-600">{item}</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${ESTADO_COLOR[c.estado]}`}>
+                        {c.estado}{c.obs ? ` — ${c.obs}` : ''}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            {viewing.observaciones && (
+              <p className="text-sm text-slate-600 mt-4"><strong>Observaciones:</strong> {viewing.observaciones}</p>
+            )}
+            <div className="mt-4">
+              <ActaPhotos acta={viewing} />
+            </div>
+          </div>
+          <div className="flex justify-end mt-5 pt-4 border-t border-slate-100">
+            <button onClick={downloadPDF} disabled={exporting} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50">
+              {exporting ? <ButtonSpinner /> : <Icon name="Download" className="w-4 h-4" />}
+              {exporting ? 'Generando...' : 'Descargar PDF'}
+            </button>
+          </div>
         </Modal>
       )}
 
