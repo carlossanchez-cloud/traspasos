@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Icon } from '../lib/icons'
 import { formatDate, formatKM, isExpired, daysDiff, todayISO, STATUS_STYLE } from '../lib/format'
 import { overallMtoPct } from '../lib/maintenance'
-import { pdfOrientation } from '../lib/pdf'
+import { pdfOrientation, waitForImages } from '../lib/pdf'
 import VehiclePhoto from '../components/VehiclePhoto'
 import MaintenancePanel from '../components/MaintenancePanel'
 import Spinner from '../components/Spinner'
@@ -30,6 +30,7 @@ export default function Ficha() {
         import('html2canvas-pro'),
         import('jspdf'),
       ])
+      await waitForImages(printRef.current)
       const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff' })
       const img = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: pdfOrientation(canvas.width, canvas.height), unit: 'px', format: [canvas.width, canvas.height] })

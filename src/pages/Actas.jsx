@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
-import { pdfOrientation } from '../lib/pdf'
+import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -104,6 +104,7 @@ export default function Actas() {
         import('html2canvas-pro'),
         import('jspdf'),
       ])
+      await waitForImages(printRef.current)
       const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
       const img = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: pdfOrientation(canvas.width, canvas.height), unit: 'px', format: [canvas.width, canvas.height] })
