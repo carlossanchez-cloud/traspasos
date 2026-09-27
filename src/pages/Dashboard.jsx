@@ -178,7 +178,7 @@ export default function Dashboard() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="shrink-0 bg-slate-50 rounded-xl p-2">
-                      <VehicleTypeIcon tipo={v.tipo_vehiculo} className="w-12 h-8 text-slate-400" />
+                      <VehicleTypeIcon tipo={v.tipo_vehiculo} className="w-12 h-8" />
                     </div>
                     <div>
                       <p className="font-mono font-bold text-slate-800">{v.placa}</p>

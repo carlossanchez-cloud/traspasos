@@ -72,7 +72,7 @@ export default function Ficha() {
         <div className="flex items-start justify-between pb-4 mb-4 border-b border-slate-100">
           <div className="flex items-center gap-4">
             <div className="bg-slate-50 rounded-xl p-3">
-              <VehicleTypeIcon tipo={vehicle.tipo_vehiculo} className="w-20 h-14 text-slate-400" />
+              <VehicleTypeIcon tipo={vehicle.tipo_vehiculo} className="w-20 h-14" />
             </div>
             <div>
               <p className="font-mono font-black text-2xl text-slate-800">{vehicle.placa}</p>

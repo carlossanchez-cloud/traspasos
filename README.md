@@ -127,3 +127,9 @@ No configurado todavía. Más simple: Vercel o Netlify conectado al repo de GitH
   existen en este repo. Se descartaron todos. Al revisar el código real a mano por las mismas 4 categorías, el
   único hallazgo genuino era la falta de validación de archivos en Actas, ya corregida arriba. Pendiente: repetir
   el escaneo con un modelo recomendado (Anthropic/OpenAI) o Strix Cloud para tener una pasada confiable.
+
+## Créditos de terceros
+
+- Ilustraciones de tipo de vehículo (`src/components/VehicleTypeIcon.jsx`): basadas en los emoji de coche/todoterreno/pickup
+  de [Twemoji](https://github.com/twitter/twemoji) (Twitter, Inc. y colaboradores), licencia **CC-BY 4.0**, recoloreadas
+  a la paleta neutra de la app.
