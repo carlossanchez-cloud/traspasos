@@ -108,7 +108,7 @@ export default function Actas() {
       const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
       const img = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: pdfOrientation(canvas.width, canvas.height), unit: 'px', format: [canvas.width, canvas.height] })
-      pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height)
+      pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height, undefined, 'FAST')
       pdf.save(`Acta_${viewing.placa}_${viewing.fecha}.pdf`)
     } finally {
       setExporting(false)

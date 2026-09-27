@@ -34,7 +34,10 @@ export default function Ficha() {
       const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff' })
       const img = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: pdfOrientation(canvas.width, canvas.height), unit: 'px', format: [canvas.width, canvas.height] })
-      pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height)
+      // jsPDF embeds a PNG's raw decoded pixels uncompressed unless told otherwise - a
+      // ~150KB page was coming out as a 6-30MB PDF. 'FAST' applies real (lossless) Flate
+      // compression to that raw stream.
+      pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height, undefined, 'FAST')
       pdf.save(`Ficha_${vehicle.placa}.pdf`)
     } finally {
       setExporting(false)
