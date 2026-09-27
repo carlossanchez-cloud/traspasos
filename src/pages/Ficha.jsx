@@ -31,12 +31,7 @@ export default function Ficha() {
         import('jspdf'),
       ])
       await waitForImages(printRef.current)
-      // Tailwind v4 wraps its whole stylesheet in `@layer properties{...}` - html2canvas-pro's
-      // CSS parser doesn't recognize that at-rule and silently skips the entire stylesheet,
-      // capturing totally unstyled markup (native-size images, bare <input> boxes, no layout).
-      // foreignObjectRendering delegates the paint to the browser's own engine instead of
-      // html2canvas's CSS parser, so it renders exactly what's on screen.
-      const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true, foreignObjectRendering: true })
+      const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
       const img = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: pdfOrientation(canvas.width, canvas.height), unit: 'px', format: [canvas.width, canvas.height] })
       // jsPDF embeds a PNG's raw decoded pixels uncompressed unless told otherwise - a
