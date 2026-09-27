@@ -8,6 +8,7 @@ import Solicitudes from './pages/Solicitudes'
 import Admin from './pages/Admin'
 import Actas from './pages/Actas'
 import Informes from './pages/Informes'
+import Ficha from './pages/Ficha'
 import Spinner from './components/Spinner'
 
 const NAV = [
@@ -89,6 +90,7 @@ export default function App() {
         <Gate>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/flota/:id" element={<Ficha />} />
             <Route path="/mapa" element={<Mapa />} />
             <Route path="/solicitudes" element={<Solicitudes />} />
             <Route path="/actas" element={<Actas />} />

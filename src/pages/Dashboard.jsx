@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
@@ -18,11 +19,15 @@ const EMPTY_FORM = {
   observaciones: '', nombre_ubicacion: '', ubicacion: '',
 }
 
-function StatCard({ label, value, tone }) {
+function StatCard({ label, value, tone, bar, icon }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4">
-      <p className="text-xs font-bold text-slate-400 uppercase">{label}</p>
-      <p className={`text-2xl font-black mt-1 ${tone}`}>{value}</p>
+    <div className="relative overflow-hidden bg-white border border-slate-200 rounded-2xl p-4 pl-5">
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${bar}`} />
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{label}</p>
+        <Icon name={icon} className={`w-4 h-4 ${tone} opacity-70`} />
+      </div>
+      <p className={`text-3xl font-black mt-1.5 ${tone}`}>{value}</p>
     </div>
   )
 }
@@ -125,10 +130,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Total flota" value={stats.total} tone="text-slate-800" />
-        <StatCard label="Disponibles" value={stats.disponibles} tone="text-emerald-600" />
-        <StatCard label="Asignados" value={stats.asignados} tone="text-blue-600" />
-        <StatCard label="En taller" value={stats.taller} tone="text-red-600" />
+        <StatCard label="Total flota" value={stats.total} tone="text-slate-800" bar="bg-slate-300" icon="Car" />
+        <StatCard label="Disponibles" value={stats.disponibles} tone="text-emerald-600" bar="bg-emerald-500" icon="CheckCircle" />
+        <StatCard label="Asignados" value={stats.asignados} tone="text-blue-600" bar="bg-blue-500" icon="User" />
+        <StatCard label="En taller" value={stats.taller} tone="text-red-600" bar="bg-red-500" icon="Wrench" />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
@@ -167,10 +172,14 @@ export default function Dashboard() {
             const style = STATUS_STYLE[v.estado]
             const overdue = v.estado === 'Asignado' && v.fecha_fin && isExpired(v.fecha_fin)
             return (
-              <button key={v.id} onClick={() => openEdit(v)} className="text-left bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md hover:border-slate-300 transition-all">
+              <div key={v.id} role="button" tabIndex={0} onClick={() => openEdit(v)}
+                onKeyDown={(e) => { if (e.key === 'Enter') openEdit(v) }}
+                className="text-left bg-white border border-slate-200 rounded-2xl p-4 hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all cursor-pointer">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-2.5">
-                    <VehicleTypeIcon tipo={v.tipo_vehiculo} className="w-9 h-6 mt-0.5 text-slate-300 shrink-0" />
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 bg-slate-50 rounded-xl p-2">
+                      <VehicleTypeIcon tipo={v.tipo_vehiculo} className="w-12 h-8 text-slate-400" />
+                    </div>
                     <div>
                       <p className="font-mono font-bold text-slate-800">{v.placa}</p>
                       <p className="text-xs text-slate-500 truncate max-w-[150px]" title={v.modelo}>{v.modelo}</p>
@@ -187,7 +196,13 @@ export default function Dashboard() {
                     {overdue && <span className="ml-2 text-red-600 font-bold">vencido</span>}
                   </div>
                 )}
-              </button>
+                <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end">
+                  <Link to={`/flota/${v.id}`} onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:underline">
+                    <Icon name="FileText" className="w-3.5 h-3.5" /> Ver ficha
+                  </Link>
+                </div>
+              </div>
             )
           })}
         </div>
@@ -248,6 +263,11 @@ function VehicleForm({ form, setForm, ciudades, readOnly }) {
     <div className="grid sm:grid-cols-2 gap-3">
       <Field label="Placa"><input disabled={readOnly} value={form.placa} onChange={set('placa')} className={inputCls} /></Field>
       <Field label="Modelo"><input disabled={readOnly} value={form.modelo} onChange={set('modelo')} className={inputCls} /></Field>
+      <Field label="Tipo de vehículo">
+        <select disabled={readOnly} value={form.tipo_vehiculo} onChange={set('tipo_vehiculo')} className={inputCls}>
+          <option>Automóvil</option><option>Camioneta</option><option>Pickup</option>
+        </select>
+      </Field>
       <Field label="Ciudad">
         <select disabled={readOnly} value={form.ciudad} onChange={set('ciudad')} className={inputCls}>
           {ciudades.map((c) => <option key={c}>{c}</option>)}
