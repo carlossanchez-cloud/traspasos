@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
-import { formatDate, formatKM, isExpired, STATUS_STYLE, todayISO } from '../lib/format'
+import { formatDate, formatKM, daysDiff, STATUS_STYLE, todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -181,7 +181,10 @@ export default function Dashboard() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((v) => {
             const style = STATUS_STYLE[v.estado]
-            const overdue = v.estado === 'Asignado' && v.fecha_fin && isExpired(v.fecha_fin)
+            const diasEnEstado = daysDiff(v.fecha_estado || todayISO())
+            const diasPrestado = v.estado === 'Asignado' ? daysDiff(v.fecha_inicio || todayISO()) : 0
+            const diasRestantes = v.estado === 'Asignado' ? daysDiff(todayISO(), v.fecha_fin || todayISO()) : 0
+            const vencido = diasRestantes < 0
             return (
               <div key={v.id} role="button" tabIndex={0} onClick={() => openEdit(v)}
                 onKeyDown={(e) => { if (e.key === 'Enter') openEdit(v) }}
@@ -201,9 +204,26 @@ export default function Dashboard() {
                   <Icon name="MapPin" className="w-3.5 h-3.5" /> {v.ciudad}
                 </div>
                 {v.estado === 'Asignado' && (
-                  <div className="mt-1 text-xs text-slate-500">
-                    <span className="font-medium">{v.cliente || 'Cliente sin nombre'}</span>
-                    {overdue && <span className="ml-2 text-red-600 font-bold">vencido</span>}
+                  <>
+                    <div className="mt-1 text-xs text-slate-500 font-medium">{v.cliente || 'Cliente sin nombre'}</div>
+                    <div className="mt-2 flex items-center gap-3 text-xs">
+                      <span className="text-slate-500">Prestado <span className="font-bold text-slate-700">{diasPrestado} d</span></span>
+                      <span className={`font-bold ${vencido ? 'text-red-600' : 'text-emerald-700'}`}>
+                        {vencido ? `Vencido ${Math.abs(diasRestantes)} d` : `Faltan ${diasRestantes} d`}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {v.estado === 'Disponible' && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-700">
+                    <Icon name="CheckCircle" className="w-3.5 h-3.5" />
+                    Listo para asignar · <span className="font-bold">{diasEnEstado} d disponible</span>
+                  </div>
+                )}
+                {v.estado === 'Taller' && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-red-700">
+                    <Icon name="Wrench" className="w-3.5 h-3.5" />
+                    En taller hace <span className="font-bold">{diasEnEstado} d</span>
                   </div>
                 )}
                 <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end">

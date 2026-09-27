@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Icon } from '../lib/icons'
-import { formatDate, formatKM, isExpired, STATUS_STYLE } from '../lib/format'
+import { formatDate, formatKM, isExpired, daysDiff, todayISO, STATUS_STYLE } from '../lib/format'
 import { overallMtoPct } from '../lib/maintenance'
 import { pdfOrientation } from '../lib/pdf'
 import VehiclePhoto from '../components/VehiclePhoto'
@@ -47,6 +47,10 @@ export default function Ficha() {
   const soatExpired = isExpired(vehicle.soat)
   const rtmExpired = isExpired(vehicle.rtm)
   const overall = overallMtoPct(vehicle.mto_detalle, vehicle.km_actual)
+  const diasEnEstado = daysDiff(vehicle.fecha_estado || todayISO())
+  const diasPrestado = vehicle.estado === 'Asignado' ? daysDiff(vehicle.fecha_inicio || todayISO()) : 0
+  const diasRestantes = vehicle.estado === 'Asignado' ? daysDiff(todayISO(), vehicle.fecha_fin || todayISO()) : 0
+  const vencido = diasRestantes < 0
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -81,14 +85,18 @@ export default function Ficha() {
           <div>
             <p className="text-xs font-bold text-slate-400 uppercase mb-1">Ubicación y asignación</p>
             <Row label="Ciudad" value={vehicle.ciudad} />
-            {vehicle.estado === 'Asignado' && (
+            {vehicle.estado === 'Asignado' ? (
               <>
                 <Row label="Cliente" value={vehicle.cliente || '-'} />
                 <Row label="Admin de flota" value={vehicle.admin_flota || '-'} />
                 <Row label="Placa sustituida" value={vehicle.placa_sustituida || '-'} />
                 <Row label="Desde" value={formatDate(vehicle.fecha_inicio)} />
                 <Row label="Hasta" value={formatDate(vehicle.fecha_fin)} warn={isExpired(vehicle.fecha_fin)} />
+                <Row label="Prestado" value={`${diasPrestado} d`} />
+                <Row label={vencido ? 'Vencido hace' : 'Faltan'} value={`${Math.abs(diasRestantes)} d`} warn={vencido} />
               </>
+            ) : (
+              <Row label={vehicle.estado === 'Taller' ? 'Tiempo en taller' : 'Días disponible'} value={`${diasEnEstado} d`} />
             )}
           </div>
           <div>
