@@ -29,8 +29,8 @@ function Shell({ children }) {
       <nav className="md:w-56 shrink-0 bg-slate-900 text-slate-100 flex md:flex-col justify-between">
         <div className="flex md:flex-col overflow-x-auto md:overflow-visible">
           <div className="hidden md:block px-4 py-5">
-            <p className="font-bold text-sm text-white">Flota Sustitutos</p>
-            <p className="text-xs text-slate-400">Renting</p>
+            <img src="/rentandes-logo.png" alt="rentandes" className="h-6 w-auto mb-1.5" />
+            <p className="text-xs text-slate-400">Flota Sustitutos</p>
           </div>
           {NAV.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
