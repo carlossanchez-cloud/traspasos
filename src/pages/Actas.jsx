@@ -105,7 +105,10 @@ export default function Actas() {
         import('jspdf'),
       ])
       await waitForImages(printRef.current)
-      const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+      // Tailwind v4 wraps its stylesheet in `@layer properties{...}`, which html2canvas-pro's
+      // CSS parser doesn't recognize - it then skips the whole stylesheet and captures
+      // unstyled markup. foreignObjectRendering paints via the browser's own engine instead.
+      const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true, foreignObjectRendering: true })
       const img = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: pdfOrientation(canvas.width, canvas.height), unit: 'px', format: [canvas.width, canvas.height] })
       pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height, undefined, 'FAST')
