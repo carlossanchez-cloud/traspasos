@@ -27,7 +27,7 @@ function Shell({ children }) {
   const { profile, isAdmin, signOut } = useAuth()
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      <nav className="md:w-56 shrink-0 bg-slate-900 text-slate-100 flex md:flex-col justify-between">
+      <nav className="md:w-56 shrink-0 bg-slate-900 text-slate-100 flex md:flex-col justify-between md:sticky md:top-0 md:h-screen md:overflow-y-auto">
         <div className="flex md:flex-col overflow-x-auto md:overflow-visible">
           <div className="hidden md:block px-4 py-5">
             <img src="/rentandes-logo.png" alt="rentandes" className="h-6 w-auto mb-1.5" />
