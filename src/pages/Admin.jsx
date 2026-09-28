@@ -38,7 +38,10 @@ export default function Admin() {
   const cambiarRol = async (u) => {
     if (u.id === profile.id) { notify('No puedes cambiar tu propio rol (evita quedarte sin acceso admin).', 'error'); return }
     const nuevoRol = u.role === 'admin' ? 'gestor' : 'admin'
-    const { error } = await supabase.from('profiles').update({ role: nuevoRol }).eq('id', u.id)
+    // Via RPC (security definer), no un update directo del cliente sobre profiles.role:
+    // set_user_role() re-verifica en el servidor que quien llama es admin y que no se
+    // esta auto-cambiando el rol, en vez de confiar solo en el boton deshabilitado del UI.
+    const { error } = await supabase.rpc('set_user_role', { target_id: u.id, target_role: nuevoRol })
     if (error) { notify('Error: ' + error.message, 'error'); return }
     notify(`${u.email} ahora es ${nuevoRol}.`, 'success')
     load()
