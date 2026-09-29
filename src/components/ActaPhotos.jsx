@@ -20,7 +20,7 @@ export default function ActaPhotos({ acta }) {
     let cancelled = false
     setLoading(true)
     Promise.all([
-      signAll(acta.fotos_urls || []),
+      signAll([...(acta.fotos_urls || []), ...(acta.fotos_urls_cliente || [])]),
       acta.firma_url ? signAll([acta.firma_url]) : Promise.resolve([]),
     ]).then(([fotos, firma]) => {
       if (cancelled) return

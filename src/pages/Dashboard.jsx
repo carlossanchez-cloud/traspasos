@@ -5,6 +5,8 @@ import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
 import { formatDate, formatKM, daysDiff, STATUS_STYLE, todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
+import { requiresKmUpdate } from '../lib/kmGuard'
+import { sanitizeDateFields } from '../lib/sanitizeDates'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import MaintenancePanel from '../components/MaintenancePanel'
@@ -52,6 +54,8 @@ export default function Dashboard() {
   const [toDelete, setToDelete] = useState(null)
   const [saving, setSaving] = useState(false)
   const [fotoFile, setFotoFile] = useState(null)
+  const [kmPrompt, setKmPrompt] = useState(false)
+  const [kmInput, setKmInput] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -96,8 +100,23 @@ export default function Dashboard() {
       notify('Placa, modelo y ciudad son obligatorios.', 'error')
       return
     }
+    // Pasa de Asignado a Disponible sin haber tocado el km: obligatorio actualizarlo antes
+    // de seguir (si no, "se me olvida y sigue quedando el mismo de siempre" - Alejo).
+    if (isEditing && requiresKmUpdate(selected.estado, form.estado, selected.km_actual, form.km_actual)) {
+      setKmInput(String(form.km_actual))
+      setKmPrompt(true)
+      return
+    }
+    await doSave()
+  }
+
+  const doSave = async (formOverride) => {
+    const current = formOverride || form
     setSaving(true)
-    const payload = { ...form, placa: form.placa.toUpperCase() }
+    const payload = sanitizeDateFields(
+      { ...current, placa: current.placa.toUpperCase() },
+      ['fecha_inicio', 'fecha_fin', 'soat', 'rtm'],
+    )
     delete payload.id; delete payload.created_at; delete payload.updated_at; delete payload.fecha_estado
     if (isAdding) delete payload.mto_detalle
     if (fotoFile) {
@@ -282,6 +301,35 @@ export default function Dashboard() {
               </button>
             </div>
           )}
+        </Modal>
+      )}
+
+      {kmPrompt && (
+        <Modal title="Actualizar kilometraje" onClose={() => setKmPrompt(false)}>
+          <p className="text-sm text-slate-600 mb-3">
+            <strong>{form.placa}</strong> pasa de Asignado a Disponible. Antes de continuar, ingresa el kilometraje actual del vehículo (no puede quedar igual al anterior).
+          </p>
+          <Field label="Kilometraje actual">
+            <input type="number" autoFocus value={kmInput} onChange={(e) => setKmInput(e.target.value)} className={inputCls} />
+          </Field>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => setKmPrompt(false)} className="text-sm font-bold px-4 py-2 rounded-lg border border-slate-200">Cancelar</button>
+            <button
+              onClick={() => {
+                if (kmInput === '' || Number(kmInput) === Number(selected.km_actual)) {
+                  notify('Ingresa un kilometraje distinto al anterior.', 'error')
+                  return
+                }
+                const next = { ...form, km_actual: Number(kmInput) }
+                setForm(next)
+                setKmPrompt(false)
+                doSave(next)
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg"
+            >
+              Confirmar y guardar
+            </button>
+          </div>
         </Modal>
       )}
 

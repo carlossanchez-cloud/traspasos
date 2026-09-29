@@ -32,7 +32,8 @@ function EstadoBar({ vehicles }) {
 
 // Barra ranqueada de una sola serie (magnitud): un solo hue de marca, sin leyenda
 // (el título ya nombra la serie), etiqueta directa del conteo al final de la barra.
-function RankedBars({ title, data }) {
+// Exportada: Informes.jsx la reusa para "top clientes" en vez de reimplementar el patrón.
+export function RankedBars({ title, data }) {
   const max = Math.max(1, ...data.map((d) => d.n))
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-4">
