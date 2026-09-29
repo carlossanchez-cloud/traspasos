@@ -9,6 +9,7 @@ import Admin from './pages/Admin'
 import Actas from './pages/Actas'
 import Informes from './pages/Informes'
 import Ficha from './pages/Ficha'
+import ActaPublica from './pages/ActaPublica'
 import Spinner from './components/Spinner'
 
 const NAV = [
@@ -87,17 +88,23 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Gate>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/flota/:id" element={<Ficha />} />
-            <Route path="/mapa" element={<Mapa />} />
-            <Route path="/solicitudes" element={<Solicitudes />} />
-            <Route path="/actas" element={<Actas />} />
-            <Route path="/informes" element={<Informes />} />
-            <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
-          </Routes>
-        </Gate>
+        <Routes>
+          {/* Sin login: el cliente entra con el enlace que le comparte el gestor, fuera del Gate de Google OAuth. */}
+          <Route path="/acta-publica/:token" element={<ActaPublica />} />
+          <Route path="/*" element={
+            <Gate>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/flota/:id" element={<Ficha />} />
+                <Route path="/mapa" element={<Mapa />} />
+                <Route path="/solicitudes" element={<Solicitudes />} />
+                <Route path="/actas" element={<Actas />} />
+                <Route path="/informes" element={<Informes />} />
+                <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
+              </Routes>
+            </Gate>
+          } />
+        </Routes>
       </BrowserRouter>
     </AuthProvider>
   )

@@ -5,6 +5,8 @@ import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
 import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
+import { CHECK_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, isValidImage } from '../lib/actaChecklist'
+import { publicActaUrl, waShareUrl, mailtoShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import Row from '../components/Row'
@@ -12,19 +14,7 @@ import SignaturePad from '../components/SignaturePad'
 import ActaPhotos from '../components/ActaPhotos'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
 
-const CHECK_ITEMS = ['Carrocería', 'Llantas', 'Interior', 'Luces', 'Documentos en el vehículo']
-const ESTADOS = ['Bueno', 'Regular', 'Malo']
-const ESTADO_COLOR = {
-  Bueno: 'bg-emerald-600 text-white border-emerald-600',
-  Regular: 'bg-amber-500 text-white border-amber-500',
-  Malo: 'bg-red-600 text-white border-red-600',
-}
-
-const emptyChecklist = () => Object.fromEntries(CHECK_ITEMS.map((k) => [k, { estado: 'Bueno', obs: '' }]))
 const EMPTY = { tipo: 'Entrega', placa: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
-
-const MAX_FILE_BYTES = 8 * 1024 * 1024 // 8MB — fotos de celular normales caben, evita subir cualquier cosa gigante
-const isValidImage = (file) => file.type.startsWith('image/') && file.size <= MAX_FILE_BYTES
 
 export default function Actas() {
   const { profile } = useAuth()
@@ -223,6 +213,11 @@ export default function Actas() {
       {viewing && (
         <Modal title={`${viewing.placa} — ${viewing.tipo} — ${formatDate(viewing.fecha)}`} onClose={() => setViewing(null)}>
           <div ref={printRef} className="bg-white">
+            <div className="flex items-center justify-between mb-1">
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${viewing.bloqueada ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                {viewing.bloqueada ? 'Firmada por el cliente' : 'Pendiente de firma del cliente'}
+              </span>
+            </div>
             <Row label="Cliente" value={viewing.cliente} />
             <Row label="Conductor" value={viewing.conductor || '-'} />
             <Row label="Kilometraje" value={viewing.kilometraje ? formatKM(viewing.kilometraje) : '-'} />
@@ -245,12 +240,52 @@ export default function Actas() {
               </div>
             </div>
             {viewing.observaciones && (
-              <p className="text-sm text-slate-600 mt-4"><strong>Observaciones:</strong> {viewing.observaciones}</p>
+              <p className="text-sm text-slate-600 mt-4"><strong>Observaciones del gestor:</strong> {viewing.observaciones}</p>
+            )}
+            {viewing.bloqueada && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Firmado por el cliente</p>
+                <Row label="Nombre" value={viewing.nombre_cliente || '-'} />
+                {viewing.observaciones_cliente && <p className="text-sm text-slate-600 mt-1">{viewing.observaciones_cliente}</p>}
+              </div>
             )}
             <div className="mt-4">
               <ActaPhotos acta={viewing} />
             </div>
           </div>
+
+          {!viewing.bloqueada && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <p className="text-xs font-bold text-slate-500 uppercase mb-2">Compartir con el cliente</p>
+              <p className="text-xs text-slate-500 mb-2">
+                El cliente abre este enlace sin necesidad de iniciar sesión, ve lo que ya llenaste y agrega su nombre, observaciones, fotos y firma.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(publicActaUrl(viewing.id))
+                      notify('Enlace copiado.', 'success')
+                    } catch {
+                      notify('No se pudo copiar automáticamente. Copia el enlace de la barra de direcciones.', 'error')
+                    }
+                  }}
+                  className="text-sm font-bold text-emerald-700 hover:underline"
+                >
+                  Copiar enlace
+                </button>
+                <a href={waShareUrl(publicActaUrl(viewing.id), `Acta de ${viewing.tipo.toLowerCase()} de ${viewing.placa}, por favor revisa y firma:`)}
+                  target="_blank" rel="noreferrer" className="text-sm font-bold text-emerald-700 hover:underline">
+                  WhatsApp
+                </a>
+                <a href={mailtoShareUrl(publicActaUrl(viewing.id), `Acta ${viewing.placa}`, `Por favor revisa y firma el acta de ${viewing.tipo.toLowerCase()} de ${viewing.placa}.`)}
+                  className="text-sm font-bold text-emerald-700 hover:underline">
+                  Email
+                </a>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end mt-5 pt-4 border-t border-slate-100">
             <button onClick={downloadPDF} disabled={exporting} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50">
               {exporting ? <ButtonSpinner /> : <Icon name="Download" className="w-4 h-4" />}

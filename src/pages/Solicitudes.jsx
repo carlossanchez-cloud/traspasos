@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
 import { formatDate, todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
+import { matchesSolicitud } from '../lib/matching'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
@@ -57,8 +58,13 @@ export default function Solicitudes() {
   const abrirResolucion = async (s) => {
     setResolving(s)
     setPlacaElegida('')
-    const { data } = await supabase.from('vehicles').select('*').eq('ciudad', s.ciudad).eq('tipo_vehiculo', s.tipo_vehiculo).eq('estado', 'Disponible')
-    setCandidatos(data || [])
+    // Solo 'estado' se filtra exacto en el servidor (es un enum controlado). ciudad/tipo_vehiculo
+    // se comparan en el cliente con matchesSolicitud (case/espacios-insensible): datos reales
+    // (seed cargado a mano, ciudades agregadas en momentos distintos) traen inconsistencias de
+    // mayusculas/espacios que hacian que el .eq() exacto de antes no encontrara vehiculos que
+    // en realidad si aplicaban (ver src/lib/matching.js).
+    const { data } = await supabase.from('vehicles').select('*').eq('estado', 'Disponible')
+    setCandidatos((data || []).filter((v) => matchesSolicitud(v, s)))
   }
 
   const resolver = async () => {
