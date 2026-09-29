@@ -6,6 +6,7 @@ import { Icon } from '../lib/icons'
 import { formatDate, formatKM, daysDiff, STATUS_STYLE, todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
 import { requiresKmUpdate } from '../lib/kmGuard'
+import { sanitizeDateFields } from '../lib/sanitizeDates'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import MaintenancePanel from '../components/MaintenancePanel'
@@ -112,7 +113,10 @@ export default function Dashboard() {
   const doSave = async (formOverride) => {
     const current = formOverride || form
     setSaving(true)
-    const payload = { ...current, placa: current.placa.toUpperCase() }
+    const payload = sanitizeDateFields(
+      { ...current, placa: current.placa.toUpperCase() },
+      ['fecha_inicio', 'fecha_fin', 'soat', 'rtm'],
+    )
     delete payload.id; delete payload.created_at; delete payload.updated_at; delete payload.fecha_estado
     if (isAdding) delete payload.mto_detalle
     if (fotoFile) {

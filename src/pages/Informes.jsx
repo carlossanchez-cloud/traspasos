@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Icon } from '../lib/icons'
 import { formatDate, todayISO } from '../lib/format'
 import Spinner from '../components/Spinner'
+import InformesCharts from '../components/InformesCharts'
 
 const FILTROS = ['Todos', 'Préstamos Activos', 'En Taller', 'Devueltos/Cerrados']
 
@@ -70,6 +71,8 @@ export default function Informes() {
           {FILTROS.map((f) => <option key={f}>{f}</option>)}
         </select>
       </div>
+
+      {!loading && <InformesCharts rows={filtered} />}
 
       {loading ? (
         <Spinner label="Cargando historial..." />
