@@ -5,6 +5,13 @@ import assert from 'node:assert/strict'
 const sql = readFileSync(new URL('../../supabase/steps/16_data_api_grants.sql', import.meta.url), 'utf8')
   .toLowerCase()
   .replace(/\s+/g, ' ')
+const recursionFix = readFileSync(new URL('../../supabase/steps/11_fix_profiles_recursion.sql', import.meta.url), 'utf8')
+  .toLowerCase()
+  .replace(/\s+/g, ' ')
+
+test('las migraciones 01..16 pueden reemplazar is_admin sin colisionar', () => {
+  assert.match(recursionFix, /create or replace function is_admin\(\)/)
+})
 
 test('Data API: authenticated recibe solo los accesos usados por el frontend', () => {
   assert.match(sql, /grant usage on schema public to authenticated/)

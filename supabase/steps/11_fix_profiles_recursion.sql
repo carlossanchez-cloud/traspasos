@@ -6,7 +6,7 @@
 -- Fix estandar de Supabase: una funcion security definer que consulta profiles SIN pasar
 -- por RLS (por eso security definer), usada desde la policy en vez del select inline.
 -- Solo mira la fila del usuario actual (auth.uid()), no expone nada mas.
-create function is_admin()
+create or replace function is_admin()
 returns boolean
 language sql
 security definer
