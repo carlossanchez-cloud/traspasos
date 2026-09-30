@@ -8,6 +8,7 @@ import Row from '../components/Row'
 import Toast from '../components/Toast'
 import SignaturePad from '../components/SignaturePad'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
+import Modal from '../components/Modal'
 
 // Vista publica, SIN login, de un acta (bug/feature "acta cliente"): el cliente entra con
 // el enlace que le comparte el gestor (token = id del acta, ver src/lib/shareLink.js),
@@ -23,6 +24,7 @@ export default function ActaPublica() {
   const [firma, setFirma] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
 
   useEffect(() => {
     supabase.rpc('get_acta_publica', { p_token: token }).then(({ data, error }) => {
@@ -42,10 +44,17 @@ export default function ActaPublica() {
     return paths
   }
 
-  const enviar = async () => {
+  // Antes esto enviaba directo al primer clic (bug real: un cliente sin cuenta
+  // firmando un documento legal no tenia paso de revision). Ahora "Firmar y enviar"
+  // solo valida y abre confirmacion; enviar() (el envio real) corre desde el modal.
+  const pedirConfirmacion = () => {
     if (!nombreCliente.trim()) { notify('Escribe tu nombre.', 'error'); return }
     if (fotos.length === 0) { notify('Sube al menos una foto de evidencia.', 'error'); return }
     if (!firma) { notify('Falta la firma.', 'error'); return }
+    setConfirmando(true)
+  }
+
+  const enviar = async () => {
     setSubmitting(true)
     try {
       const fotos_urls_cliente = await uploadFiles(fotos, 'foto')
@@ -60,17 +69,26 @@ export default function ActaPublica() {
       if (error) throw error
       setDone(true)
     } catch (err) {
-      notify('Error enviando: ' + err.message, 'error')
+      // No mostrar el error tecnico crudo a un cliente sin cuenta (bug real,
+      // encontrado en la revision) - el detalle queda en consola para soporte.
+      console.error('[ActaPublica] error al enviar', err)
+      notify('No se pudo enviar. Revisa tu conexión e inténtalo de nuevo; si sigue fallando, contacta a tu gestor de flota.', 'error')
+    } finally {
+      setSubmitting(false)
+      setConfirmando(false)
     }
-    setSubmitting(false)
   }
 
   if (acta === undefined) return <div className="min-h-screen flex items-center justify-center"><Spinner label="Cargando acta..." /></div>
 
   if (acta === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <p className="text-sm text-slate-500 text-center max-w-sm">Este enlace no es válido. Pide al administrador de flota que te comparta el enlace del acta nuevamente.</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-sm w-full bg-white border border-slate-200 rounded-2xl shadow-sm p-8 text-center">
+          <img src="/rentandes-logo.png" alt="rentandes" className="h-6 w-auto mx-auto mb-4" />
+          <p className="text-sm font-bold text-slate-800 mb-1">Este enlace no es válido</p>
+          <p className="text-xs text-slate-500">Pide al administrador de flota que te comparta el enlace del acta nuevamente.</p>
+        </div>
       </div>
     )
   }
@@ -142,7 +160,7 @@ export default function ActaPublica() {
                 <SignaturePad onChange={setFirma} />
               </div>
               <div className="flex justify-end mt-5">
-                <button onClick={enviar} disabled={submitting} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+                <button onClick={pedirConfirmacion} disabled={submitting} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
                   {submitting && <ButtonSpinner />}
                   {submitting ? 'Enviando...' : 'Firmar y enviar'}
                 </button>
@@ -151,6 +169,21 @@ export default function ActaPublica() {
           )}
         </div>
       </div>
+      {confirmando && (
+        <Modal title="Confirmar envío" onClose={() => !submitting && setConfirmando(false)}>
+          <p className="text-sm text-slate-600">
+            Vas a enviar el acta de {acta.tipo.toLowerCase()} de <strong>{acta.placa}</strong> con tu nombre, fotos y firma.
+            Una vez enviada, esta acta queda cerrada y no se puede editar.
+          </p>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => setConfirmando(false)} disabled={submitting} className="text-sm font-bold px-4 py-2 rounded-lg border border-slate-200 disabled:opacity-50">Cancelar</button>
+            <button onClick={enviar} disabled={submitting} className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">
+              {submitting && <ButtonSpinner />}
+              {submitting ? 'Enviando...' : 'Sí, firmar y enviar'}
+            </button>
+          </div>
+        </Modal>
+      )}
       <Toast {...toast} onClose={clear} />
     </div>
   )

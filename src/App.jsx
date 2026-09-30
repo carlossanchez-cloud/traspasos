@@ -10,6 +10,7 @@ import Actas from './pages/Actas'
 import Informes from './pages/Informes'
 import Ficha from './pages/Ficha'
 import ActaPublica from './pages/ActaPublica'
+import NotFound from './pages/NotFound'
 import Spinner from './components/Spinner'
 
 const NAV = [
@@ -101,6 +102,7 @@ export default function App() {
                 <Route path="/actas" element={<Actas />} />
                 <Route path="/informes" element={<Informes />} />
                 <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </Gate>
           } />

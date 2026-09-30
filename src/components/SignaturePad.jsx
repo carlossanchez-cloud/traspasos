@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // Canvas de firma simple: dedo/mouse dibuja, exporta PNG como File. Reemplaza el
 // "sube una foto de la firma" por una firma real capturada en pantalla.
@@ -6,6 +6,26 @@ export default function SignaturePad({ onChange }) {
   const canvasRef = useRef(null)
   const drawing = useRef(false)
   const [empty, setEmpty] = useState(true)
+
+  // Bug real: el canvas tenia un buffer de dibujo fijo (400x140) pero se renderizaba
+  // a ancho completo (w-full) - en cualquier celular donde el ancho mostrado no fuera
+  // exactamente 400px, el trazo quedaba desplazado de donde tocaba el dedo (pos()
+  // calcula la coordenada en pixeles CSS mostrados, no en la resolucion del buffer).
+  // Fix: el buffer del canvas se ajusta al tamaño real mostrado (getBoundingClientRect)
+  // y se escala por devicePixelRatio para que tambien se vea nitido en retina.
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const ajustarTamano = () => {
+      const rect = canvas.getBoundingClientRect()
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = rect.width * dpr
+      canvas.height = rect.height * dpr
+      canvas.getContext('2d').scale(dpr, dpr)
+    }
+    ajustarTamano()
+    window.addEventListener('resize', ajustarTamano)
+    return () => window.removeEventListener('resize', ajustarTamano)
+  }, [])
 
   const pos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect()
@@ -55,9 +75,7 @@ export default function SignaturePad({ onChange }) {
     <div>
       <canvas
         ref={canvasRef}
-        width={400}
-        height={140}
-        className="w-full bg-slate-50 border border-slate-200 rounded-lg touch-none"
+        className="w-full h-[140px] bg-slate-50 border border-slate-200 rounded-lg touch-none"
         onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
         onTouchStart={start} onTouchMove={move} onTouchEnd={end}
       />

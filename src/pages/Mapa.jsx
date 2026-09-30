@@ -5,6 +5,8 @@ import 'leaflet/dist/leaflet.css'
 import { supabase } from '../lib/supabaseClient'
 import { Icon } from '../lib/icons'
 import { CITY_COORDS, cityCoords, distanceKm, titleCase } from '../lib/cityCoords'
+import { useToast } from '../lib/useToast'
+import Toast from '../components/Toast'
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
@@ -33,14 +35,23 @@ function FlyTo({ center }) {
 }
 
 export default function Mapa() {
+  const { toast, notify, clear } = useToast()
   const [vehicles, setVehicles] = useState([])
+  const [loading, setLoading] = useState(true)
   const [ciudadManual, setCiudadManual] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [flyCenter, setFlyCenter] = useState(null)
   const [cercanos, setCercanos] = useState([])
 
+  // Antes esto no tenia loading ni manejo de error (bug real, encontrado en la
+  // revision) - un error de red dejaba el mapa vacio sin explicar nada, distinto
+  // al resto de la app que si avisa con Toast.
   useEffect(() => {
-    supabase.from('vehicles').select('placa,modelo,ciudad,estado,cliente').then(({ data }) => setVehicles(data || []))
+    supabase.from('vehicles').select('placa,modelo,ciudad,estado,cliente').then(({ data, error }) => {
+      if (error) notify('Error cargando el mapa: ' + error.message, 'error')
+      setVehicles(data || [])
+      setLoading(false)
+    })
   }, [])
 
   const cityStats = useMemo(() => {
@@ -85,6 +96,9 @@ export default function Mapa() {
       <h1 className="text-xl font-black text-slate-800 mb-1">Mapa de la flota</h1>
       <p className="text-sm text-slate-500 mb-4">Ubicación de vehículos sustitutos por ciudad.</p>
 
+      {loading ? (
+        <div className="rounded-2xl border border-slate-200 bg-white animate-pulse" style={{ height: 560 }} />
+      ) : (
       <div className="relative" style={{ height: 560 }}>
         <MapContainer center={[4.5709, -74.2973]} zoom={5} zoomControl={false} style={{ height: '100%', width: '100%', borderRadius: '1rem', zIndex: 0 }} className="border border-slate-200 shadow-sm">
           <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" subdomains="abc" />
@@ -132,6 +146,8 @@ export default function Mapa() {
           </div>
         </div>
       </div>
+      )}
+      <Toast {...toast} onClose={clear} />
     </div>
   )
 }
