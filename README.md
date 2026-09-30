@@ -109,6 +109,11 @@ No configurado todavía. Más simple: Vercel o Netlify conectado al repo de GitH
 - **Resolución de solicitud atómica** — ahora es una función RPC de Postgres (`resolve_solicitud`, ver
   `10_resolve_solicitud_rpc.sql`) en vez de 2 updates seguidos desde el cliente.
 - **Validación de archivos en Actas** — solo imágenes, máx 8MB c/u (encontrado real al revisar seguridad, ver abajo).
+- **Acta pública sin login** (`/acta-publica/:token`) — requiere los pasos SQL `17_actas_publicas.sql` Y
+  `18_fix_storage_policy_acta_publica.sql`. El 18 es un fix real (2026-09-30, probado en vivo): la policy de
+  storage del 17 fallaba siempre para el cliente (`new row violates row-level security policy`) porque su
+  chequeo quedaba sujeto sin querer al RLS de `actas`. Si ya corriste el 17 antes de esta actualización,
+  solo te falta correr el 18, no hay que repetir nada.
 
 ## Qué falta (a propósito, no es descuido)
 
