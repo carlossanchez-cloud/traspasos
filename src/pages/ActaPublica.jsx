@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate, formatKM } from '../lib/format'
-import { isValidImage } from '../lib/actaChecklist'
 import { useToast } from '../lib/useToast'
 import Row from '../components/Row'
 import ChecklistView from '../components/ChecklistView'
+import PhotoPicker from '../components/PhotoPicker'
 import Toast from '../components/Toast'
 import SignaturePad from '../components/SignaturePad'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
@@ -134,14 +134,8 @@ export default function ActaPublica() {
                 </Field>
               </div>
               <div className="mt-2">
-                <Field label="Fotos de evidencia (imagen, max 8MB c/u)">
-                  <input type="file" accept="image/*" multiple onChange={(e) => {
-                    const files = [...e.target.files]
-                    const valid = files.filter(isValidImage)
-                    if (valid.length < files.length) notify('Algunas fotos no son imágenes válidas o pesan más de 8MB — se omitieron.', 'error')
-                    setFotos(valid)
-                  }} className="text-xs mt-1" />
-                </Field>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos de evidencia (imagen, max 8MB c/u)</p>
+                <PhotoPicker fotos={fotos} onChange={setFotos} onError={(msg) => notify(msg, 'error')} />
               </div>
               <div className="mt-4">
                 <p className="text-xs font-bold text-slate-500 uppercase mb-1">Tu firma</p>

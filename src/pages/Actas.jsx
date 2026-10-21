@@ -5,7 +5,7 @@ import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
 import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
-import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, isValidImage } from '../lib/actaChecklist'
+import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen } from '../lib/actaChecklist'
 import { publicActaUrl, waShareUrl, mailtoShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -13,6 +13,7 @@ import Row from '../components/Row'
 import SignaturePad from '../components/SignaturePad'
 import ActaPhotos from '../components/ActaPhotos'
 import ChecklistView from '../components/ChecklistView'
+import PhotoPicker from '../components/PhotoPicker'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
 
 const EMPTY = { tipo: 'Entrega', placa: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
@@ -204,15 +205,9 @@ export default function Actas() {
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-3 mt-4">
-            <Field label="Fotos (4-6, imagen, max 8MB c/u)">
-              <input type="file" accept="image/*" multiple onChange={(e) => {
-                const files = [...e.target.files]
-                const valid = files.filter(isValidImage)
-                if (valid.length < files.length) notify('Algunas fotos no son imágenes válidas o pesan más de 8MB — se omitieron.', 'error')
-                setFotos(valid)
-              }} className="text-xs mt-1" />
-            </Field>
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos (4-6, imagen, max 8MB c/u)</p>
+            <PhotoPicker fotos={fotos} onChange={setFotos} onError={(msg) => notify(msg, 'error')} />
           </div>
           <div className="mt-4">
             <p className="text-xs font-bold text-slate-500 uppercase mb-1">Firma del cliente</p>
