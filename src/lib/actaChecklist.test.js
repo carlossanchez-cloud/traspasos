@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isValidImage, emptyChecklist, esNovedad, estadosParte, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
+import { isValidImage, emptyChecklist, esNovedad, estadosParte, resumenEstado, conResumen, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
 
 test('isValidImage: acepta imagen <= 8MB, rechaza otro tipo o mas de 8MB', () => {
   assert.equal(isValidImage({ type: 'image/png', size: 1024 }), true)
@@ -30,4 +30,22 @@ test('emptyChecklist: cada item con desglose trae todas sus partes en su estado 
 test('esNovedad: Bueno, Vigente y No aplica no son novedad', () => {
   for (const e of ['Bueno', 'Vigente', 'No aplica']) assert.equal(esNovedad(e), false)
   for (const e of ['Regular', 'Malo', 'Vencido', 'No se encuentra']) assert.equal(esNovedad(e), true)
+})
+
+test('resumenEstado: el estado del grupo es lo peor de sus partes', () => {
+  const p = (...estados) => Object.fromEntries(estados.map((estado, i) => [i, { estado, obs: '' }]))
+  assert.equal(resumenEstado(p('Bueno', 'Bueno')), 'Bueno')
+  assert.equal(resumenEstado(p('Bueno', 'Regular')), 'Regular')
+  assert.equal(resumenEstado(p('Regular', 'Malo')), 'Malo')
+  assert.equal(resumenEstado(p('Vigente', 'No aplica')), 'Bueno')
+  assert.equal(resumenEstado(p('Vigente', 'Vencido')), 'Malo')
+  assert.equal(resumenEstado(p('No se encuentra')), 'Malo')
+})
+
+test('conResumen: recalcula el estado de cada grupo al guardar', () => {
+  const c = emptyChecklist()
+  c['Llantas'].partes['Posición 5 — Repuesto'].estado = 'Regular'
+  const r = conResumen(c)
+  assert.equal(r['Llantas'].estado, 'Regular')
+  assert.equal(r['Carrocería'].estado, 'Bueno')
 })

@@ -36,6 +36,18 @@ export const ESTADO_COLOR = {
 // Estados que no son una novedad: no piden observacion ni suman al contador "con novedad".
 export const esNovedad = (estado) => !['Bueno', 'Vigente', 'No aplica'].includes(estado)
 
+// El estado general de un item con partes ya no se elige a mano: se resume de sus partes
+// (lo peor que tenga). Vencido / No se encuentra cuentan como Malo.
+export const resumenEstado = (partes) => {
+  const estados = Object.values(partes || {}).map((p) => p.estado)
+  if (estados.some((e) => ['Malo', 'Vencido', 'No se encuentra'].includes(e))) return 'Malo'
+  if (estados.includes('Regular')) return 'Regular'
+  return 'Bueno'
+}
+export const conResumen = (checklist) => Object.fromEntries(Object.entries(checklist).map(([k, v]) => [k, v.partes
+  ? { ...v, estado: resumenEstado(v.partes) }
+  : v]))
+
 const emptyEntry = (estado = 'Bueno') => ({ estado, obs: '' })
 export const emptyChecklist = () => Object.fromEntries(CHECK_ITEMS.map((k) => [k, SUB_ITEMS[k]
   ? { ...emptyEntry(), partes: Object.fromEntries(SUB_ITEMS[k].map((p) => [p, emptyEntry(estadosParte(k)[0])])) }

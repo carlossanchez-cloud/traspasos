@@ -5,7 +5,7 @@ import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
 import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
-import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, isValidImage } from '../lib/actaChecklist'
+import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, isValidImage } from '../lib/actaChecklist'
 import { publicActaUrl, waShareUrl, mailtoShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -53,7 +53,6 @@ export default function Actas() {
   }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-  const setCheck = (item, field, value) => setChecklist((c) => ({ ...c, [item]: { ...c[item], [field]: value } }))
   const setParte = (item, parte, field, value) => setChecklist((c) => ({
     ...c, [item]: { ...c[item], partes: { ...c[item].partes, [parte]: { ...c[item].partes[parte], [field]: value } } },
   }))
@@ -80,7 +79,7 @@ export default function Actas() {
       const firma_url = firma ? (await uploadFiles([firma], `${form.placa}/firma`))[0] : null
       const { error } = await supabase.from('actas').insert({
         ...form, kilometraje: form.kilometraje ? Number(form.kilometraje) : null,
-        checklist, fotos_urls, firma_url,
+        checklist: conResumen(checklist), fotos_urls, firma_url,
       })
       if (error) throw error
       notify('Acta guardada.', 'success')
@@ -168,32 +167,32 @@ export default function Actas() {
             <div className="flex flex-col gap-3">
               {CHECK_ITEMS.map((item) => {
                 const partes = SUB_ITEMS[item]
-                const malas = partes ? partes.filter((p) => esNovedad(checklist[item].partes[p].estado)).length : 0
+                const malas = partes.filter((p) => esNovedad(checklist[item].partes[p].estado)).length
+                const abierto = expanded[item]
+                const toggle = () => setExpanded((x) => ({ ...x, [item]: !x[item] }))
                 return (
                   // Cada item es un bloque: encabezado gris y sus partes en un fondo gris mas claro, para
                   // que con todo desplegado se distinga donde termina un grupo y empieza el siguiente.
-                  <div key={item} className={`rounded-lg border overflow-hidden ${partes && expanded[item] ? 'border-slate-300 shadow-sm' : 'border-slate-200'}`}>
-                    <div className={`px-2.5 py-2 ${partes ? 'bg-slate-100' : 'bg-white'}`}>
-                      <EstadoInput
-                        label={partes ? (
-                          <button type="button" onClick={() => setExpanded((x) => ({ ...x, [item]: !x[item] }))}
-                            className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 hover:text-slate-950">
-                            <span className={`text-xs text-slate-400 transition-transform ${expanded[item] ? 'rotate-90' : ''}`}>▶</span>
-                            {item}
-                            <span className="text-[11px] font-normal text-slate-400">
-                              ({malas ? `${malas} con novedad` : `${partes.length} partes`})
-                            </span>
-                          </button>
-                        ) : item}
-                        entry={checklist[item]}
-                        onChange={(field, value) => setCheck(item, field, value)}
-                      />
+                  // El estado del grupo no se elige aqui: se resume de sus partes al guardar (conResumen).
+                  <div key={item} className={`rounded-lg border overflow-hidden ${abierto ? 'border-slate-400 shadow-sm' : 'border-slate-300'}`}>
+                    <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-200">
+                      <button type="button" onClick={toggle} className="flex items-center gap-2 text-sm font-semibold text-slate-800 text-left">
+                        {item}
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${malas ? 'bg-amber-100 text-amber-800' : 'bg-white/70 text-slate-500'}`}>
+                          {malas ? `${malas} con novedad` : `${partes.length} partes`}
+                        </span>
+                      </button>
+                      <button type="button" onClick={toggle}
+                        className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-md border shrink-0 transition-colors ${abierto ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'}`}>
+                        {abierto ? 'Cerrar' : 'Detalle'}
+                        <span className={`text-[10px] transition-transform ${abierto ? 'rotate-180' : ''}`}>▼</span>
+                      </button>
                     </div>
-                    {partes && expanded[item] && (
-                      <div className="bg-slate-50 border-t border-slate-200 px-3 py-1 divide-y divide-slate-200/70">
+                    {abierto && (
+                      <div className="bg-slate-100 border-t border-slate-300 px-3 py-1 divide-y divide-slate-300/60">
                         {partes.map((p) => (
                           <div key={p} className="py-1.5">
-                            <EstadoInput label={p} small estados={estadosParte(item)} entry={checklist[item].partes[p]}
+                            <EstadoInput label={p} estados={estadosParte(item)} entry={checklist[item].partes[p]}
                               onChange={(field, value) => setParte(item, p, field, value)} />
                           </div>
                         ))}
@@ -312,13 +311,11 @@ export default function Actas() {
 function Field({ label, children }) { return <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{label}{children}</label> }
 const inputCls = 'w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500'
 
-function EstadoInput({ label, entry, onChange, small, estados = ESTADOS }) {
+function EstadoInput({ label, entry, onChange, estados = ESTADOS }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        {typeof label === 'string'
-          ? <span className={small ? 'text-xs text-slate-600' : 'text-sm font-medium text-slate-700'}>{label}</span>
-          : label}
+        <span className="text-xs text-slate-700">{label}</span>
         <div className="flex flex-wrap justify-end gap-1">
           {estados.map((e) => (
             <button key={e} type="button" onClick={() => onChange('estado', e)}
