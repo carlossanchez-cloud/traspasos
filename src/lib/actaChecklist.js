@@ -48,6 +48,16 @@ export const conResumen = (checklist) => Object.fromEntries(Object.entries(check
   ? { ...v, estado: resumenEstado(v.partes) }
   : v]))
 
+// Partes en Regular/Malo/Vencido que exigen una foto como prueba de lo marcado. "No se encuentra"
+// no pide foto: no hay nada que fotografiar.
+export const fotoKey = (item, parte) => `${item}::${parte}`
+export const novedadesConFoto = (checklist) => CHECK_ITEMS.flatMap((item) => (SUB_ITEMS[item] || [])
+  .filter((parte) => {
+    const e = checklist[item]?.partes?.[parte]?.estado
+    return e && esNovedad(e) && e !== 'No se encuentra'
+  })
+  .map((parte) => ({ item, parte, key: fotoKey(item, parte), ...checklist[item].partes[parte] })))
+
 const emptyEntry = (estado = 'Bueno') => ({ estado, obs: '' })
 export const emptyChecklist = () => Object.fromEntries(CHECK_ITEMS.map((k) => [k, SUB_ITEMS[k]
   ? { ...emptyEntry(), partes: Object.fromEntries(SUB_ITEMS[k].map((p) => [p, emptyEntry(estadosParte(k)[0])])) }

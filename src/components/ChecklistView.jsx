@@ -30,7 +30,7 @@ function EstadoRow({ label, entry, small }) {
     <div className="flex items-center justify-between gap-2">
       <span className={small ? 'text-xs text-slate-500' : 'text-sm text-slate-600'}>{label}</span>
       <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${ESTADO_COLOR[entry.estado]}`}>
-        {entry.estado}{entry.obs ? ` — ${entry.obs}` : ''}
+        {entry.estado}{entry.obs ? ` — ${entry.obs}` : ''}{entry.foto ? ' · 📷' : ''}
       </span>
     </div>
   )

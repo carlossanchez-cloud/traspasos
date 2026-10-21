@@ -6,7 +6,9 @@ import { isValidImage } from '../lib/actaChecklist'
 // via getUserMedia, en celular y en computador; el navegador pide el permiso). Si la camara no esta
 // disponible o se niega el permiso, cae al input con capture, que en celular abre la app de camara.
 // Las fotos se acumulan: cada subida o captura se suma a las anteriores, y cada una se puede quitar.
-export default function PhotoPicker({ fotos, onChange, onError }) {
+// Con `single` maneja una sola foto (la de una novedad puntual): reemplaza en vez de sumar y la camara
+// se cierra sola al disparar.
+export default function PhotoPicker({ fotos, onChange, onError, single }) {
   const fileRef = useRef(null)
   const captureRef = useRef(null)
   const [camera, setCamera] = useState(false)
@@ -14,7 +16,7 @@ export default function PhotoPicker({ fotos, onChange, onError }) {
   const add = (files) => {
     const valid = files.filter(isValidImage)
     if (valid.length < files.length) onError('Algunas fotos no son imágenes válidas o pesan más de 8MB — se omitieron.')
-    if (valid.length) onChange([...fotos, ...valid])
+    if (valid.length) onChange(single ? [valid[0]] : [...fotos, ...valid])
   }
   const fromInput = (e) => { add([...e.target.files]); e.target.value = '' }
 
@@ -26,22 +28,22 @@ export default function PhotoPicker({ fotos, onChange, onError }) {
   const previews = useMemo(() => fotos.map((f) => URL.createObjectURL(f)), [fotos])
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews])
 
-  const btn = 'flex-1 flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+  const btn = `flex-1 flex items-center justify-center gap-2 font-bold rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 ${single ? 'text-xs px-2 py-2' : 'text-sm px-3 py-2.5'}`
   return (
     <div>
       <div className="flex gap-2">
         <button type="button" onClick={() => fileRef.current.click()} className={btn}>
-          <Icon name="Upload" className="w-4 h-4" /> Subir archivos
+          <Icon name="Upload" className="w-4 h-4" /> {single ? 'Subir archivo' : 'Subir archivos'}
         </button>
         <button type="button" onClick={openCamera} className={btn}>
-          <Icon name="Camera" className="w-4 h-4" /> Tomar foto
+          <Icon name="Camera" className="w-4 h-4" /> {fotos.length && single ? 'Repetir foto' : 'Tomar foto'}
         </button>
       </div>
-      <input ref={fileRef} type="file" accept="image/*" multiple onChange={fromInput} className="hidden" />
+      <input ref={fileRef} type="file" accept="image/*" multiple={!single} onChange={fromInput} className="hidden" />
       <input ref={captureRef} type="file" accept="image/*" capture="environment" onChange={fromInput} className="hidden" />
 
       {fotos.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+        <div className={single ? 'w-28 mt-2' : 'grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3'}>
           {previews.map((url, i) => (
             <div key={url} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
               <img src={url} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
@@ -53,11 +55,11 @@ export default function PhotoPicker({ fotos, onChange, onError }) {
           ))}
         </div>
       )}
-      <p className="text-xs text-slate-500 mt-2">{fotos.length} foto(s) seleccionada(s)</p>
+      {!single && <p className="text-xs text-slate-500 mt-2">{fotos.length} foto(s) seleccionada(s)</p>}
 
       {camera && (
         <CameraModal
-          onCapture={(file) => add([file])}
+          onCapture={(file) => { add([file]); if (single) setCamera(false) }}
           onClose={() => setCamera(false)}
           onFail={(msg) => { setCamera(false); onError(msg); captureRef.current.click() }}
         />

@@ -5,7 +5,7 @@ import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
 import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
-import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen } from '../lib/actaChecklist'
+import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto } from '../lib/actaChecklist'
 import { publicActaUrl, waShareUrl, mailtoShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -27,6 +27,7 @@ export default function Actas() {
   const [form, setForm] = useState(EMPTY)
   const [checklist, setChecklist] = useState(emptyChecklist())
   const [fotos, setFotos] = useState([])
+  const [fotosNovedad, setFotosNovedad] = useState({}) // fotoKey(item, parte) -> File
   const [firma, setFirma] = useState(null)
   const [saving, setSaving] = useState(false)
   const [viewing, setViewing] = useState(null)
@@ -49,7 +50,7 @@ export default function Actas() {
   const openCreate = () => {
     setForm({ ...EMPTY, placa: placas[0] || '' })
     setChecklist(emptyChecklist())
-    setFotos([]); setFirma(null); setExpanded({})
+    setFotos([]); setFotosNovedad({}); setFirma(null); setExpanded({})
     setCreating(true)
   }
 
@@ -74,13 +75,24 @@ export default function Actas() {
 
   const guardar = async () => {
     if (!form.placa || !form.cliente) { notify('Placa y cliente son obligatorios.', 'error'); return }
+    const novedades = novedadesConFoto(checklist)
+    const sinFoto = novedades.filter((n) => !fotosNovedad[n.key])
+    if (sinFoto.length) {
+      notify(`Falta la foto de: ${sinFoto.map((n) => n.parte).join(', ')}.`, 'error')
+      return
+    }
     setSaving(true)
     try {
       const fotos_urls = fotos.length ? await uploadFiles(fotos, `${form.placa}/fotos`) : []
       const firma_url = firma ? (await uploadFiles([firma], `${form.placa}/firma`))[0] : null
+      // Cada foto de novedad se guarda dentro de su parte (partes[parte].foto = path en storage).
+      const conFotos = structuredClone(checklist)
+      for (const n of novedades) {
+        conFotos[n.item].partes[n.parte].foto = (await uploadFiles([fotosNovedad[n.key]], `${form.placa}/novedades`))[0]
+      }
       const { error } = await supabase.from('actas').insert({
         ...form, kilometraje: form.kilometraje ? Number(form.kilometraje) : null,
-        checklist: conResumen(checklist), fotos_urls, firma_url,
+        checklist: conResumen(conFotos), fotos_urls, firma_url,
       })
       if (error) throw error
       notify('Acta guardada.', 'success')
@@ -205,8 +217,31 @@ export default function Actas() {
             </div>
           </div>
 
+          {novedadesConFoto(checklist).length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos de las novedades (obligatorias)</p>
+              <div className="flex flex-col gap-2">
+                {novedadesConFoto(checklist).map((n) => {
+                  const file = fotosNovedad[n.key]
+                  return (
+                    <div key={n.key} className={`rounded-lg border p-3 ${file ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'}`}>
+                      <p className="text-sm text-slate-800 mb-2">
+                        {file ? '✓ ' : ''}Por favor, toma una foto de <strong>{n.parte}</strong>
+                        <span className="text-slate-500"> ({n.item})</span>
+                        {n.obs ? <>, que presenta: <strong>{n.obs}</strong></> : <>, marcado como <strong>{n.estado}</strong></>}.
+                      </p>
+                      <PhotoPicker single fotos={file ? [file] : []}
+                        onChange={(fs) => setFotosNovedad((m) => ({ ...m, [n.key]: fs[0] }))}
+                        onError={(msg) => notify(msg, 'error')} />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="mt-4">
-            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos (4-6, imagen, max 8MB c/u)</p>
+            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos generales (4-6, imagen, max 8MB c/u)</p>
             <PhotoPicker fotos={fotos} onChange={setFotos} onError={(msg) => notify(msg, 'error')} />
           </div>
           <div className="mt-4">

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isValidImage, emptyChecklist, esNovedad, estadosParte, resumenEstado, conResumen, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
+import { isValidImage, emptyChecklist, esNovedad, estadosParte, resumenEstado, conResumen, novedadesConFoto, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
 
 test('isValidImage: acepta imagen <= 8MB, rechaza otro tipo o mas de 8MB', () => {
   assert.equal(isValidImage({ type: 'image/png', size: 1024 }), true)
@@ -48,4 +48,17 @@ test('conResumen: recalcula el estado de cada grupo al guardar', () => {
   const r = conResumen(c)
   assert.equal(r['Llantas'].estado, 'Regular')
   assert.equal(r['Carrocería'].estado, 'Bueno')
+})
+
+test('novedadesConFoto: pide foto de Regular/Malo/Vencido, no de Bueno ni No se encuentra', () => {
+  const c = emptyChecklist()
+  c['Carrocería'].partes['Puerta delantera izquierda'] = { estado: 'Regular', obs: 'sumido' }
+  c['Kit de carretera'].partes['Extintor'] = { estado: 'Malo', obs: '' }
+  c['Documentos en el vehículo'].partes['SOAT'] = { estado: 'Vencido', obs: '' }
+  c['Documentos en el vehículo'].partes['Tarjeta de propiedad'] = { estado: 'No se encuentra', obs: '' }
+  c['Documentos en el vehículo'].partes['Póliza todo riesgo'] = { estado: 'No aplica', obs: '' }
+  const n = novedadesConFoto(c)
+  assert.deepEqual(n.map((x) => x.parte), ['Puerta delantera izquierda', 'SOAT', 'Extintor'])
+  assert.equal(n[0].obs, 'sumido')
+  assert.equal(n[0].key, 'Carrocería::Puerta delantera izquierda')
 })
