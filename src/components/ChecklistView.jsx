@@ -7,7 +7,9 @@ export default function ChecklistView({ checklist }) {
       {CHECK_ITEMS.map((item) => {
         const c = checklist?.[item]
         if (!c) return null
-        const partes = (SUB_ITEMS[item] || []).filter((p) => c.partes?.[p])
+        const guardadas = Object.keys(c.partes || {})
+        // Orden de la lista actual primero; despues partes de actas viejas que ya no estan en la lista.
+        const partes = [...(SUB_ITEMS[item] || []).filter((p) => c.partes?.[p]), ...guardadas.filter((p) => !SUB_ITEMS[item]?.includes(p))]
         return (
           <div key={item} className="border-b border-slate-100 pb-1.5">
             <EstadoRow label={item} entry={c} />

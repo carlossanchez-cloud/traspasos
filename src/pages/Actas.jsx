@@ -5,7 +5,7 @@ import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
 import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
-import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, isValidImage } from '../lib/actaChecklist'
+import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, isValidImage } from '../lib/actaChecklist'
 import { publicActaUrl, waShareUrl, mailtoShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -168,7 +168,7 @@ export default function Actas() {
             <div className="flex flex-col gap-2">
               {CHECK_ITEMS.map((item) => {
                 const partes = SUB_ITEMS[item]
-                const malas = partes ? partes.filter((p) => checklist[item].partes[p].estado !== 'Bueno').length : 0
+                const malas = partes ? partes.filter((p) => esNovedad(checklist[item].partes[p].estado)).length : 0
                 return (
                   <div key={item} className="border border-slate-200 rounded-lg p-2.5">
                     <EstadoInput
@@ -188,7 +188,7 @@ export default function Actas() {
                     {partes && expanded[item] && (
                       <div className="mt-2 ml-2 pl-3 border-l border-slate-200 flex flex-col gap-2">
                         {partes.map((p) => (
-                          <EstadoInput key={p} label={p} small entry={checklist[item].partes[p]}
+                          <EstadoInput key={p} label={p} small estados={estadosParte(item)} entry={checklist[item].partes[p]}
                             onChange={(field, value) => setParte(item, p, field, value)} />
                         ))}
                       </div>
@@ -306,15 +306,15 @@ export default function Actas() {
 function Field({ label, children }) { return <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{label}{children}</label> }
 const inputCls = 'w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500'
 
-function EstadoInput({ label, entry, onChange, small }) {
+function EstadoInput({ label, entry, onChange, small, estados = ESTADOS }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
         {typeof label === 'string'
           ? <span className={small ? 'text-xs text-slate-600' : 'text-sm font-medium text-slate-700'}>{label}</span>
           : label}
-        <div className="flex gap-1 shrink-0">
-          {ESTADOS.map((e) => (
+        <div className="flex flex-wrap justify-end gap-1">
+          {estados.map((e) => (
             <button key={e} type="button" onClick={() => onChange('estado', e)}
               className={`text-xs font-bold px-2 py-1 rounded-md border transition-colors ${entry.estado === e ? ESTADO_COLOR[e] : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
               {e}
@@ -322,7 +322,7 @@ function EstadoInput({ label, entry, onChange, small }) {
           ))}
         </div>
       </div>
-      {entry.estado !== 'Bueno' && (
+      {esNovedad(entry.estado) && (
         <input placeholder="Observación..." value={entry.obs} onChange={(e) => onChange('obs', e.target.value)}
           className="w-full mt-2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs" />
       )}

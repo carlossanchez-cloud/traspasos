@@ -8,7 +8,7 @@ export const SUB_ITEMS = {
   'Carrocería': [
     'Puerta delantera izquierda', 'Puerta delantera derecha', 'Puerta trasera izquierda', 'Puerta trasera derecha',
     'Capó', 'Baúl', 'Techo', 'Guardabarro delantero izquierdo', 'Guardabarro delantero derecho',
-    'Costado izquierdo', 'Costado derecho', 'Parte trasera',
+    'Costado izquierdo', 'Costado derecho', 'Bumper delantero', 'Bumper trasero',
   ],
   'Llantas': [
     'Posición 1 — Delantera izquierda', 'Posición 2 — Delantera derecha', 'Posición 3 — Trasera derecha',
@@ -16,18 +16,29 @@ export const SUB_ITEMS = {
   ],
   'Interior': ['Tapizados', 'Carteras de puertas', 'Techo', 'Volante', 'Palanca de cambios', 'Tablero de instrumentos'],
   'Luces': ['Delanteras', 'Traseras', 'Interiores'],
-  'Kit de carretera': ['Botiquín', 'Extintor', 'Chaleco', 'Linterna', 'Conos', 'Herramienta', 'Gato', 'Cruceta'],
+  'Documentos en el vehículo': ['SOAT', 'Tecnomecánica', 'Póliza todo riesgo', 'Tarjeta de propiedad'],
+  'Kit de carretera': ['Botiquín', 'Extintor', 'Chaleco', 'Linterna', 'Conos', 'Herramienta', 'Gato', 'Cruceta', 'Tacos de seguridad'],
 }
 export const ESTADOS = ['Bueno', 'Regular', 'Malo']
+// Las partes de Documentos no se califican por estado fisico sino por vigencia.
+export const ESTADOS_DOCUMENTO = ['Vigente', 'Vencido', 'No aplica', 'No se encuentra']
+// Opciones de las partes de un item; la primera es la que viene por defecto.
+export const estadosParte = (item) => (item === 'Documentos en el vehículo' ? ESTADOS_DOCUMENTO : ESTADOS)
 export const ESTADO_COLOR = {
   Bueno: 'bg-emerald-600 text-white border-emerald-600',
   Regular: 'bg-amber-500 text-white border-amber-500',
   Malo: 'bg-red-600 text-white border-red-600',
+  Vigente: 'bg-emerald-600 text-white border-emerald-600',
+  Vencido: 'bg-red-600 text-white border-red-600',
+  'No aplica': 'bg-slate-500 text-white border-slate-500',
+  'No se encuentra': 'bg-amber-500 text-white border-amber-500',
 }
+// Estados que no son una novedad: no piden observacion ni suman al contador "con novedad".
+export const esNovedad = (estado) => !['Bueno', 'Vigente', 'No aplica'].includes(estado)
 
-const emptyEntry = () => ({ estado: 'Bueno', obs: '' })
+const emptyEntry = (estado = 'Bueno') => ({ estado, obs: '' })
 export const emptyChecklist = () => Object.fromEntries(CHECK_ITEMS.map((k) => [k, SUB_ITEMS[k]
-  ? { ...emptyEntry(), partes: Object.fromEntries(SUB_ITEMS[k].map((p) => [p, emptyEntry()])) }
+  ? { ...emptyEntry(), partes: Object.fromEntries(SUB_ITEMS[k].map((p) => [p, emptyEntry(estadosParte(k)[0])])) }
   : emptyEntry()]))
 
 export const MAX_FILE_BYTES = 8 * 1024 * 1024 // 8MB — fotos de celular normales caben, evita subir cualquier cosa gigante

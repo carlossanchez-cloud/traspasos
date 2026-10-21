@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isValidImage, emptyChecklist, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
+import { isValidImage, emptyChecklist, esNovedad, estadosParte, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
 
 test('isValidImage: acepta imagen <= 8MB, rechaza otro tipo o mas de 8MB', () => {
   assert.equal(isValidImage({ type: 'image/png', size: 1024 }), true)
@@ -15,13 +15,19 @@ test('emptyChecklist: un item por cada CHECK_ITEMS, todos en "Bueno"', () => {
   for (const item of CHECK_ITEMS.filter((i) => !SUB_ITEMS[i])) assert.deepEqual(c[item], { estado: 'Bueno', obs: '' })
 })
 
-test('emptyChecklist: cada item con desglose trae todas sus partes en "Bueno"', () => {
+test('emptyChecklist: cada item con desglose trae todas sus partes en su estado por defecto', () => {
   const c = emptyChecklist()
   for (const [item, partes] of Object.entries(SUB_ITEMS)) {
     assert.equal(c[item].estado, 'Bueno')
     assert.equal(Object.keys(c[item].partes).length, partes.length)
-    for (const p of partes) assert.deepEqual(c[item].partes[p], { estado: 'Bueno', obs: '' })
+    for (const p of partes) assert.deepEqual(c[item].partes[p], { estado: estadosParte(item)[0], obs: '' })
   }
-  assert.equal(SUB_ITEMS['Carrocería'].length, 12)
+  assert.equal(SUB_ITEMS['Carrocería'].length, 13)
   assert.equal(SUB_ITEMS['Llantas'].length, 5)
+  assert.equal(c['Documentos en el vehículo'].partes['SOAT'].estado, 'Vigente')
+})
+
+test('esNovedad: Bueno, Vigente y No aplica no son novedad', () => {
+  for (const e of ['Bueno', 'Vigente', 'No aplica']) assert.equal(esNovedad(e), false)
+  for (const e of ['Regular', 'Malo', 'Vencido', 'No se encuentra']) assert.equal(esNovedad(e), true)
 })
