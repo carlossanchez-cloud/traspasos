@@ -10,6 +10,13 @@ export const SUB_ITEMS = {
     'Capó', 'Baúl', 'Techo', 'Guardabarro delantero izquierdo', 'Guardabarro delantero derecho',
     'Costado izquierdo', 'Costado derecho', 'Parte trasera',
   ],
+  'Llantas': [
+    'Posición 1 — Delantera izquierda', 'Posición 2 — Delantera derecha', 'Posición 3 — Trasera derecha',
+    'Posición 4 — Trasera izquierda', 'Posición 5 — Repuesto',
+  ],
+  'Interior': ['Tapizados', 'Carteras de puertas', 'Techo', 'Volante', 'Palanca de cambios', 'Tablero de instrumentos'],
+  'Luces': ['Delanteras', 'Traseras', 'Interiores'],
+  'Kit de carretera': ['Botiquín', 'Extintor', 'Chaleco', 'Linterna', 'Conos', 'Herramienta', 'Gato', 'Cruceta'],
 }
 export const ESTADOS = ['Bueno', 'Regular', 'Malo']
 export const ESTADO_COLOR = {

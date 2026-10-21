@@ -15,9 +15,13 @@ test('emptyChecklist: un item por cada CHECK_ITEMS, todos en "Bueno"', () => {
   for (const item of CHECK_ITEMS.filter((i) => !SUB_ITEMS[i])) assert.deepEqual(c[item], { estado: 'Bueno', obs: '' })
 })
 
-test('emptyChecklist: Carrocería trae sus 12 partes en "Bueno"', () => {
-  const carroceria = emptyChecklist()['Carrocería']
-  assert.equal(carroceria.estado, 'Bueno')
-  assert.equal(Object.keys(carroceria.partes).length, 12)
-  for (const p of SUB_ITEMS['Carrocería']) assert.deepEqual(carroceria.partes[p], { estado: 'Bueno', obs: '' })
+test('emptyChecklist: cada item con desglose trae todas sus partes en "Bueno"', () => {
+  const c = emptyChecklist()
+  for (const [item, partes] of Object.entries(SUB_ITEMS)) {
+    assert.equal(c[item].estado, 'Bueno')
+    assert.equal(Object.keys(c[item].partes).length, partes.length)
+    for (const p of partes) assert.deepEqual(c[item].partes[p], { estado: 'Bueno', obs: '' })
+  }
+  assert.equal(SUB_ITEMS['Carrocería'].length, 12)
+  assert.equal(SUB_ITEMS['Llantas'].length, 5)
 })
