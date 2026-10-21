@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isValidImage, emptyChecklist, CHECK_ITEMS } from './actaChecklist.js'
+import { isValidImage, emptyChecklist, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
 
 test('isValidImage: acepta imagen <= 8MB, rechaza otro tipo o mas de 8MB', () => {
   assert.equal(isValidImage({ type: 'image/png', size: 1024 }), true)
@@ -12,5 +12,12 @@ test('isValidImage: acepta imagen <= 8MB, rechaza otro tipo o mas de 8MB', () =>
 test('emptyChecklist: un item por cada CHECK_ITEMS, todos en "Bueno"', () => {
   const c = emptyChecklist()
   assert.equal(Object.keys(c).length, CHECK_ITEMS.length)
-  for (const item of CHECK_ITEMS) assert.deepEqual(c[item], { estado: 'Bueno', obs: '' })
+  for (const item of CHECK_ITEMS.filter((i) => !SUB_ITEMS[i])) assert.deepEqual(c[item], { estado: 'Bueno', obs: '' })
+})
+
+test('emptyChecklist: Carrocería trae sus 12 partes en "Bueno"', () => {
+  const carroceria = emptyChecklist()['Carrocería']
+  assert.equal(carroceria.estado, 'Bueno')
+  assert.equal(Object.keys(carroceria.partes).length, 12)
+  for (const p of SUB_ITEMS['Carrocería']) assert.deepEqual(carroceria.partes[p], { estado: 'Bueno', obs: '' })
 })

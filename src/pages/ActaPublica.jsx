@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate, formatKM } from '../lib/format'
-import { CHECK_ITEMS, ESTADO_COLOR, isValidImage } from '../lib/actaChecklist'
+import { isValidImage } from '../lib/actaChecklist'
 import { useToast } from '../lib/useToast'
 import Row from '../components/Row'
+import ChecklistView from '../components/ChecklistView'
 import Toast from '../components/Toast'
 import SignaturePad from '../components/SignaturePad'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
@@ -109,20 +110,7 @@ export default function ActaPublica() {
 
         <div className="mt-4">
           <p className="text-xs font-bold text-slate-500 uppercase mb-2">Checklist del gestor</p>
-          <div className="flex flex-col gap-1.5">
-            {CHECK_ITEMS.map((item) => {
-              const c = acta.checklist?.[item]
-              if (!c) return null
-              return (
-                <div key={item} className="flex items-center justify-between text-sm border-b border-slate-100 pb-1.5">
-                  <span className="text-slate-600">{item}</span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${ESTADO_COLOR[c.estado]}`}>
-                    {c.estado}{c.obs ? ` — ${c.obs}` : ''}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+          <ChecklistView checklist={acta.checklist} />
         </div>
         {acta.observaciones && (
           <p className="text-sm text-slate-600 mt-4"><strong>Observaciones del gestor:</strong> {acta.observaciones}</p>

@@ -5,13 +5,14 @@ import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
 import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
-import { CHECK_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, isValidImage } from '../lib/actaChecklist'
+import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, isValidImage } from '../lib/actaChecklist'
 import { publicActaUrl, waShareUrl, mailtoShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import Row from '../components/Row'
 import SignaturePad from '../components/SignaturePad'
 import ActaPhotos from '../components/ActaPhotos'
+import ChecklistView from '../components/ChecklistView'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
 
 const EMPTY = { tipo: 'Entrega', placa: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
@@ -47,12 +48,16 @@ export default function Actas() {
   const openCreate = () => {
     setForm({ ...EMPTY, placa: placas[0] || '' })
     setChecklist(emptyChecklist())
-    setFotos([]); setFirma(null)
+    setFotos([]); setFirma(null); setExpanded({})
     setCreating(true)
   }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const setCheck = (item, field, value) => setChecklist((c) => ({ ...c, [item]: { ...c[item], [field]: value } }))
+  const setParte = (item, parte, field, value) => setChecklist((c) => ({
+    ...c, [item]: { ...c[item], partes: { ...c[item].partes, [parte]: { ...c[item].partes[parte], [field]: value } } },
+  }))
+  const [expanded, setExpanded] = useState({})
 
   // Bucket 'actas' es privado (fotos de vehiculos/clientes) -> se guarda el PATH, no una URL publica.
   // Para mostrar una foto despues: supabase.storage.from('actas').createSignedUrl(path, 3600).
@@ -161,25 +166,36 @@ export default function Actas() {
           <div className="mt-4">
             <p className="text-xs font-bold text-slate-500 uppercase mb-2">Checklist</p>
             <div className="flex flex-col gap-2">
-              {CHECK_ITEMS.map((item) => (
-                <div key={item} className="border border-slate-200 rounded-lg p-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700">{item}</span>
-                    <div className="flex gap-1">
-                      {ESTADOS.map((e) => (
-                        <button key={e} onClick={() => setCheck(item, 'estado', e)}
-                          className={`text-xs font-bold px-2 py-1 rounded-md border transition-colors ${checklist[item].estado === e ? ESTADO_COLOR[e] : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-                          {e}
+              {CHECK_ITEMS.map((item) => {
+                const partes = SUB_ITEMS[item]
+                const malas = partes ? partes.filter((p) => checklist[item].partes[p].estado !== 'Bueno').length : 0
+                return (
+                  <div key={item} className="border border-slate-200 rounded-lg p-2.5">
+                    <EstadoInput
+                      label={partes ? (
+                        <button type="button" onClick={() => setExpanded((x) => ({ ...x, [item]: !x[item] }))}
+                          className="flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-900">
+                          <span className={`text-xs text-slate-400 transition-transform ${expanded[item] ? 'rotate-90' : ''}`}>▶</span>
+                          {item}
+                          <span className="text-[11px] font-normal text-slate-400">
+                            ({malas ? `${malas} con novedad` : `${partes.length} partes`})
+                          </span>
                         </button>
-                      ))}
-                    </div>
+                      ) : item}
+                      entry={checklist[item]}
+                      onChange={(field, value) => setCheck(item, field, value)}
+                    />
+                    {partes && expanded[item] && (
+                      <div className="mt-2 ml-2 pl-3 border-l border-slate-200 flex flex-col gap-2">
+                        {partes.map((p) => (
+                          <EstadoInput key={p} label={p} small entry={checklist[item].partes[p]}
+                            onChange={(field, value) => setParte(item, p, field, value)} />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {checklist[item].estado !== 'Bueno' && (
-                    <input placeholder="Observación..." value={checklist[item].obs} onChange={(e) => setCheck(item, 'obs', e.target.value)}
-                      className="w-full mt-2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs" />
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -224,20 +240,7 @@ export default function Actas() {
             <Row label="Combustible" value={viewing.nivel_combustible} />
             <div className="mt-4">
               <p className="text-xs font-bold text-slate-500 uppercase mb-2">Checklist</p>
-              <div className="flex flex-col gap-1.5">
-                {CHECK_ITEMS.map((item) => {
-                  const c = viewing.checklist?.[item]
-                  if (!c) return null
-                  return (
-                    <div key={item} className="flex items-center justify-between text-sm border-b border-slate-100 pb-1.5">
-                      <span className="text-slate-600">{item}</span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${ESTADO_COLOR[c.estado]}`}>
-                        {c.estado}{c.obs ? ` — ${c.obs}` : ''}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
+              <ChecklistView checklist={viewing.checklist} />
             </div>
             {viewing.observaciones && (
               <p className="text-sm text-slate-600 mt-4"><strong>Observaciones del gestor:</strong> {viewing.observaciones}</p>
@@ -302,3 +305,27 @@ export default function Actas() {
 
 function Field({ label, children }) { return <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{label}{children}</label> }
 const inputCls = 'w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500'
+
+function EstadoInput({ label, entry, onChange, small }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        {typeof label === 'string'
+          ? <span className={small ? 'text-xs text-slate-600' : 'text-sm font-medium text-slate-700'}>{label}</span>
+          : label}
+        <div className="flex gap-1 shrink-0">
+          {ESTADOS.map((e) => (
+            <button key={e} type="button" onClick={() => onChange('estado', e)}
+              className={`text-xs font-bold px-2 py-1 rounded-md border transition-colors ${entry.estado === e ? ESTADO_COLOR[e] : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+              {e}
+            </button>
+          ))}
+        </div>
+      </div>
+      {entry.estado !== 'Bueno' && (
+        <input placeholder="Observación..." value={entry.obs} onChange={(e) => onChange('obs', e.target.value)}
+          className="w-full mt-2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs" />
+      )}
+    </div>
+  )
+}
