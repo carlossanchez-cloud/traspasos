@@ -165,31 +165,37 @@ export default function Actas() {
 
           <div className="mt-4">
             <p className="text-xs font-bold text-slate-500 uppercase mb-2">Checklist</p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {CHECK_ITEMS.map((item) => {
                 const partes = SUB_ITEMS[item]
                 const malas = partes ? partes.filter((p) => esNovedad(checklist[item].partes[p].estado)).length : 0
                 return (
-                  <div key={item} className="border border-slate-200 rounded-lg p-2.5">
-                    <EstadoInput
-                      label={partes ? (
-                        <button type="button" onClick={() => setExpanded((x) => ({ ...x, [item]: !x[item] }))}
-                          className="flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-900">
-                          <span className={`text-xs text-slate-400 transition-transform ${expanded[item] ? 'rotate-90' : ''}`}>▶</span>
-                          {item}
-                          <span className="text-[11px] font-normal text-slate-400">
-                            ({malas ? `${malas} con novedad` : `${partes.length} partes`})
-                          </span>
-                        </button>
-                      ) : item}
-                      entry={checklist[item]}
-                      onChange={(field, value) => setCheck(item, field, value)}
-                    />
+                  // Cada item es un bloque: encabezado gris y sus partes en un fondo gris mas claro, para
+                  // que con todo desplegado se distinga donde termina un grupo y empieza el siguiente.
+                  <div key={item} className={`rounded-lg border overflow-hidden ${partes && expanded[item] ? 'border-slate-300 shadow-sm' : 'border-slate-200'}`}>
+                    <div className={`px-2.5 py-2 ${partes ? 'bg-slate-100' : 'bg-white'}`}>
+                      <EstadoInput
+                        label={partes ? (
+                          <button type="button" onClick={() => setExpanded((x) => ({ ...x, [item]: !x[item] }))}
+                            className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 hover:text-slate-950">
+                            <span className={`text-xs text-slate-400 transition-transform ${expanded[item] ? 'rotate-90' : ''}`}>▶</span>
+                            {item}
+                            <span className="text-[11px] font-normal text-slate-400">
+                              ({malas ? `${malas} con novedad` : `${partes.length} partes`})
+                            </span>
+                          </button>
+                        ) : item}
+                        entry={checklist[item]}
+                        onChange={(field, value) => setCheck(item, field, value)}
+                      />
+                    </div>
                     {partes && expanded[item] && (
-                      <div className="mt-2 ml-2 pl-3 border-l border-slate-200 flex flex-col gap-2">
+                      <div className="bg-slate-50 border-t border-slate-200 px-3 py-1 divide-y divide-slate-200/70">
                         {partes.map((p) => (
-                          <EstadoInput key={p} label={p} small estados={estadosParte(item)} entry={checklist[item].partes[p]}
-                            onChange={(field, value) => setParte(item, p, field, value)} />
+                          <div key={p} className="py-1.5">
+                            <EstadoInput label={p} small estados={estadosParte(item)} entry={checklist[item].partes[p]}
+                              onChange={(field, value) => setParte(item, p, field, value)} />
+                          </div>
                         ))}
                       </div>
                     )}
@@ -316,7 +322,7 @@ function EstadoInput({ label, entry, onChange, small, estados = ESTADOS }) {
         <div className="flex flex-wrap justify-end gap-1">
           {estados.map((e) => (
             <button key={e} type="button" onClick={() => onChange('estado', e)}
-              className={`text-xs font-bold px-2 py-1 rounded-md border transition-colors ${entry.estado === e ? ESTADO_COLOR[e] : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+              className={`text-xs font-bold px-2 py-1 rounded-md border transition-colors ${entry.estado === e ? ESTADO_COLOR[e] : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
               {e}
             </button>
           ))}
@@ -324,7 +330,7 @@ function EstadoInput({ label, entry, onChange, small, estados = ESTADOS }) {
       </div>
       {esNovedad(entry.estado) && (
         <input placeholder="Observación..." value={entry.obs} onChange={(e) => onChange('obs', e.target.value)}
-          className="w-full mt-2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs" />
+          className="w-full mt-2 px-2 py-1.5 bg-white border border-slate-200 rounded text-xs" />
       )}
     </div>
   )
