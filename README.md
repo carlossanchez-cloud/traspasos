@@ -115,6 +115,13 @@ No configurado todavía. Más simple: Vercel o Netlify conectado al repo de GitH
   chequeo quedaba sujeto sin querer al RLS de `actas`. Si ya corriste el 17 antes de esta actualización,
   solo te falta correr el 18, no hay que repetir nada.
 
+- **Firma del gestor + firma del cliente por enlace** (2026-10) — el acta la firma primero el gestor de flota al
+  crearla; luego, desde la lista de Actas, "Enviar para firma del cliente" comparte el enlace. El cliente ve el acta
+  con todas las fotos, sin poder editarla, y solo agrega nombre, observaciones, fotos opcionales y su firma.
+  **Requiere el paso SQL `19_firma_gestor_y_cliente.sql`**: agrega la columna `firma_cliente_url` (antes la firma
+  del cliente sobreescribía la del gestor) y vuelve a dejar los permisos que el cliente sin sesión necesita para
+  firmar (sin ellos el envío fallaba con "revisa tu conexión"). Se puede correr aunque los pasos 17 y 18 ya estén.
+
 ## Qué falta (a propósito, no es descuido)
 
 - **Módulo financiero** (costos por vehículo/parqueadero/traslado) — la propia reunión lo marcó como fase futura,

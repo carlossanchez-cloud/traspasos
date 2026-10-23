@@ -22,6 +22,7 @@ export default function ActaPhotos({ acta }) {
   const [novedades, setNovedades] = useState([])
   const [recorrido, setRecorrido] = useState([])
   const [firmaUrl, setFirmaUrl] = useState(null)
+  const [firmaClienteUrl, setFirmaClienteUrl] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -34,14 +35,16 @@ export default function ActaPhotos({ acta }) {
     Promise.all([
       signAll([...(acta.fotos_urls || []).filter((p) => !recPaths.has(p)), ...(acta.fotos_urls_cliente || [])]),
       acta.firma_url ? signAll([acta.firma_url]) : Promise.resolve([]),
+      acta.firma_cliente_url ? signAll([acta.firma_cliente_url]) : Promise.resolve([]),
       Promise.all(fotosDeNovedades(acta.checklist).map(async (n) => ({ ...n, url: (await signAll([n.path]))[0] }))),
       Promise.all(rec.map(async (r) => ({ ...r, url: (await signAll([r.path]))[0] }))),
-    ]).then(([fotos, firma, nov, recUrls]) => {
+    ]).then(([fotos, firma, firmaCliente, nov, recUrls]) => {
       if (cancelled) return
       setRecorrido(recUrls.filter((r) => r.url))
       setFotoUrls(fotos)
       setNovedades(nov.filter((n) => n.url))
       setFirmaUrl(firma[0] || null)
+      setFirmaClienteUrl(firmaCliente[0] || null)
       setLoading(false)
     })
     return () => { cancelled = true }
@@ -89,13 +92,24 @@ export default function ActaPhotos({ acta }) {
           </div>
         </div>
       )}
-      {firmaUrl && (
-        <div>
-          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Firma</p>
-          <img src={firmaUrl} alt="Firma" className="max-h-32 border border-slate-200 rounded-lg bg-white" />
+      {(firmaUrl || firmaClienteUrl) && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {firmaUrl && (
+            <div>
+              {/* Actas nuevas: firma_url es la del gestor (paso 19). En las de antes podia ser la del cliente. */}
+              <p className="text-xs font-bold text-slate-500 uppercase mb-2">{acta.checklist?.firma_gestor_publica ? 'Firma del gestor de flota' : 'Firma'}</p>
+              <img src={firmaUrl} alt="Firma del gestor" className="max-h-32 border border-slate-200 rounded-lg bg-white" />
+            </div>
+          )}
+          {firmaClienteUrl && (
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase mb-2">Firma del cliente</p>
+              <img src={firmaClienteUrl} alt="Firma del cliente" className="max-h-32 border border-slate-200 rounded-lg bg-white" />
+            </div>
+          )}
         </div>
       )}
-      {fotoUrls.length === 0 && novedades.length === 0 && recorrido.length === 0 && !firmaUrl && <p className="text-sm text-slate-400">Sin fotos ni firma en esta acta.</p>}
+      {fotoUrls.length === 0 && novedades.length === 0 && recorrido.length === 0 && !firmaUrl && !firmaClienteUrl && <p className="text-sm text-slate-400">Sin fotos ni firma en esta acta.</p>}
     </div>
   )
 }

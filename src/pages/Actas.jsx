@@ -17,6 +17,9 @@ import PhotoPicker from '../components/PhotoPicker'
 import FotoRecorrido from '../components/FotoRecorrido'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
 
+// Las URLs firmadas que ve el cliente en el enlace duran 90 dias.
+const LINK_PUBLICO_SEGUNDOS = 90 * 24 * 3600
+
 const EMPTY = { tipo: 'Entrega', placa: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
 
 export default function Actas() {
@@ -33,6 +36,7 @@ export default function Actas() {
   const [firma, setFirma] = useState(null)
   const [saving, setSaving] = useState(false)
   const [viewing, setViewing] = useState(null)
+  const [compartiendo, setCompartiendo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const printRef = useRef(null)
@@ -88,6 +92,7 @@ export default function Actas() {
       notify(`Falta la foto de: ${sinFoto.map((n) => n.parte).join(', ')}.`, 'error')
       return
     }
+    if (!firma) { notify('Falta la firma del gestor de flota.', 'error'); return }
     setSaving(true)
     try {
       // Las del recorrido van primero en fotos_urls (asi el conteo y la galeria las incluyen) y ademas
@@ -102,12 +107,24 @@ export default function Actas() {
       for (const n of novedades) {
         conFotos[n.item].partes[n.parte].foto = (await uploadFiles([fotosNovedad[n.key]], `${form.placa}/novedades`))[0]
       }
+      // El cliente abre el enlace sin sesion y no puede leer el bucket privado: se le dejan URLs firmadas
+      // (generadas aqui, por el gestor que si tiene acceso) de las fotos y de la firma del gestor.
+      const publicas = [
+        ...FOTOS_RECORRIDO.map((f) => ({ label: f.label, path: fotos_recorrido[f.key] })),
+        ...novedades.map((n) => ({ label: `${n.parte} — ${n.estado}${n.obs ? `: ${n.obs}` : ''}`, path: conFotos[n.item].partes[n.parte].foto })),
+        ...adicionales.map((path, i) => ({ label: `Foto adicional ${i + 1}`, path })),
+      ]
+      const { data: firmadas, error: errFirmadas } = await supabase.storage.from('actas')
+        .createSignedUrls([...publicas.map((p) => p.path), firma_url], LINK_PUBLICO_SEGUNDOS)
+      if (errFirmadas) throw errFirmadas
+      const fotos_publicas = publicas.map((p, i) => ({ label: p.label, url: firmadas[i].signedUrl }))
+      const firma_gestor_publica = firmadas[publicas.length].signedUrl
       const { error } = await supabase.from('actas').insert({
         ...form, kilometraje: form.kilometraje ? Number(form.kilometraje) : null,
-        checklist: { ...conResumen(conFotos), fotos_recorrido }, fotos_urls, firma_url,
+        checklist: { ...conResumen(conFotos), fotos_recorrido, fotos_publicas, firma_gestor_publica }, fotos_urls, firma_url,
       })
       if (error) throw error
-      notify('Acta guardada.', 'success')
+      notify('Acta guardada. Ya puedes enviarla al cliente para su firma.', 'success')
       setCreating(false)
       load()
     } catch (err) {
@@ -153,14 +170,25 @@ export default function Actas() {
       ) : (
         <div className="flex flex-col gap-2">
           {actas.map((a) => (
-            <button key={a.id} onClick={() => setViewing(a)} className="text-left bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between hover:border-slate-300 hover:shadow-sm transition-all">
-              <div>
+            <div key={a.id} className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-300 hover:shadow-sm transition-all">
+              <button onClick={() => setViewing(a)} className="text-left flex-1 min-w-0">
                 <p className="font-bold text-slate-800 text-sm">
-                  <span className="font-mono">{a.placa}</span> — {a.tipo} — {a.cliente}
+                  <span className="font-mono">{a.placa}</span> — {a.tipo === 'Entrega' ? 'Entregada' : 'Recibida'} — {a.cliente}
                 </p>
-                <p className="text-xs text-slate-500">{formatDate(a.fecha)} · {a.conductor || 'sin conductor registrado'} · {a.fotos_urls?.length || 0} foto(s){a.firma_url ? ' · con firma' : ''}</p>
-              </div>
-            </button>
+                <p className="text-xs text-slate-500">{formatDate(a.fecha)} · {a.conductor || 'sin conductor registrado'} · {a.fotos_urls?.length || 0} foto(s)</p>
+              </button>
+              {a.bloqueada ? (
+                <button onClick={() => setViewing(a)}
+                  className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  ✓ Firmada por el cliente
+                </button>
+              ) : (
+                <button onClick={() => setCompartiendo(a)}
+                  className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white">
+                  Enviar para firma del cliente
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -262,7 +290,7 @@ export default function Actas() {
             <PhotoPicker fotos={fotos} onChange={setFotos} onError={(msg) => notify(msg, 'error')} />
           </div>
           <div className="mt-4">
-            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Firma del cliente</p>
+            <p className="text-xs font-bold text-slate-500 uppercase mb-1">Firma del gestor de flota</p>
             <SignaturePad onChange={setFirma} />
           </div>
           <div className="mt-2">
@@ -311,33 +339,7 @@ export default function Actas() {
 
           {!viewing.bloqueada && (
             <div className="mt-4 pt-4 border-t border-slate-100">
-              <p className="text-xs font-bold text-slate-500 uppercase mb-2">Compartir con el cliente</p>
-              <p className="text-xs text-slate-500 mb-2">
-                El cliente abre este enlace sin necesidad de iniciar sesión, ve lo que ya llenaste y agrega su nombre, observaciones, fotos y firma.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(publicActaUrl(viewing.id))
-                      notify('Enlace copiado.', 'success')
-                    } catch {
-                      notify('No se pudo copiar automáticamente. Copia el enlace de la barra de direcciones.', 'error')
-                    }
-                  }}
-                  className="text-sm font-bold text-emerald-700 hover:underline"
-                >
-                  Copiar enlace
-                </button>
-                <a href={waShareUrl(publicActaUrl(viewing.id), `Acta de ${viewing.tipo.toLowerCase()} de ${viewing.placa}, por favor revisa y firma:`)}
-                  target="_blank" rel="noreferrer" className="text-sm font-bold text-emerald-700 hover:underline">
-                  WhatsApp
-                </a>
-                <a href={mailtoShareUrl(publicActaUrl(viewing.id), `Acta ${viewing.placa}`, `Por favor revisa y firma el acta de ${viewing.tipo.toLowerCase()} de ${viewing.placa}.`)}
-                  className="text-sm font-bold text-emerald-700 hover:underline">
-                  Email
-                </a>
-              </div>
+              <EnviarFirma acta={viewing} notify={notify} />
             </div>
           )}
 
@@ -350,7 +352,42 @@ export default function Actas() {
         </Modal>
       )}
 
+      {compartiendo && (
+        <Modal title={`Enviar para firma — ${compartiendo.placa}`} onClose={() => setCompartiendo(null)}>
+          <EnviarFirma acta={compartiendo} notify={notify} />
+        </Modal>
+      )}
+
       <Toast {...toast} onClose={clear} />
+    </div>
+  )
+}
+
+// Enlace para que el cliente firme: lo abre sin iniciar sesion, ve el acta y las fotos sin poder
+// editarlas, y solo agrega su nombre, observaciones, fotos opcionales y su firma.
+function EnviarFirma({ acta, notify }) {
+  const url = publicActaUrl(acta.id)
+  const texto = `Acta de ${acta.tipo.toLowerCase()} de ${acta.placa}, por favor revisa y firma:`
+  const btn = 'flex-1 text-center text-sm font-bold px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+  return (
+    <div>
+      <p className="text-xs font-bold text-slate-500 uppercase mb-2">Enviar para firma del cliente</p>
+      <p className="text-xs text-slate-500 mb-3">
+        El cliente abre este enlace sin iniciar sesión, ve el acta con todas las fotos (sin poder editarla) y solo
+        agrega su nombre, observaciones, fotos si quiere, y su firma.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <a href={waShareUrl(url, texto)} target="_blank" rel="noreferrer" className={btn}>WhatsApp</a>
+        <a href={mailtoShareUrl(url, `Acta ${acta.placa}`, texto)} className={btn}>Email</a>
+        <button className={btn} onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(url)
+            notify('Enlace copiado.', 'success')
+          } catch {
+            notify('No se pudo copiar automáticamente: ' + url, 'error')
+          }
+        }}>Copiar enlace</button>
+      </div>
     </div>
   )
 }

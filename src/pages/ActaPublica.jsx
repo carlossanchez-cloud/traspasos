@@ -13,7 +13,9 @@ import Modal from '../components/Modal'
 
 // Vista publica, SIN login, de un acta (bug/feature "acta cliente"): el cliente entra con
 // el enlace que le comparte el gestor (token = id del acta, ver src/lib/shareLink.js),
-// ve de solo-lectura lo que el gestor ya lleno, y agrega su nombre/observaciones/fotos/firma.
+// ve de solo-lectura lo que el gestor ya lleno y firmo (incluidas las fotos, via las URLs firmadas que el
+// gestor dejo en checklist.fotos_publicas al guardar), y agrega su nombre, observaciones, fotos opcionales y
+// su firma.
 // Vive fuera del <Gate> de App.jsx a proposito: no requiere sesion de Google.
 export default function ActaPublica() {
   const { token } = useParams()
@@ -50,7 +52,6 @@ export default function ActaPublica() {
   // solo valida y abre confirmacion; enviar() (el envio real) corre desde el modal.
   const pedirConfirmacion = () => {
     if (!nombreCliente.trim()) { notify('Escribe tu nombre.', 'error'); return }
-    if (fotos.length === 0) { notify('Sube al menos una foto de evidencia.', 'error'); return }
     if (!firma) { notify('Falta la firma.', 'error'); return }
     setConfirmando(true)
   }
@@ -58,7 +59,7 @@ export default function ActaPublica() {
   const enviar = async () => {
     setSubmitting(true)
     try {
-      const fotos_urls_cliente = await uploadFiles(fotos, 'foto')
+      const fotos_urls_cliente = fotos.length ? await uploadFiles(fotos, 'foto') : []
       const [firma_url] = await uploadFiles([firma], 'firma')
       const { error } = await supabase.rpc('submit_acta_publica', {
         p_token: token,
@@ -73,7 +74,9 @@ export default function ActaPublica() {
       // No mostrar el error tecnico crudo a un cliente sin cuenta (bug real,
       // encontrado en la revision) - el detalle queda en consola para soporte.
       console.error('[ActaPublica] error al enviar', err)
-      notify('No se pudo enviar. Revisa tu conexión e inténtalo de nuevo; si sigue fallando, contacta a tu gestor de flota.', 'error')
+      // Se agrega un detalle corto para que el gestor pueda reportarlo (antes solo quedaba en consola y el
+      // mensaje culpaba a la conexion aunque el fallo fuera de permisos en la base de datos).
+      notify(`No se pudo enviar. Inténtalo de nuevo; si sigue fallando, contacta a tu gestor de flota (detalle: ${err?.message || err}).`, 'error')
     } finally {
       setSubmitting(false)
       setConfirmando(false)
@@ -116,6 +119,26 @@ export default function ActaPublica() {
           <p className="text-sm text-slate-600 mt-4"><strong>Observaciones del gestor:</strong> {acta.observaciones}</p>
         )}
 
+        {acta.checklist?.fotos_publicas?.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos tomadas por el gestor ({acta.checklist.fotos_publicas.length})</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {acta.checklist.fotos_publicas.map((f) => (
+                <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="block">
+                  <img src={f.url} alt={f.label} className="w-full h-24 object-cover rounded-lg border border-slate-200 bg-slate-100" />
+                  <p className="text-[11px] text-slate-600 mt-1 leading-tight">{f.label}</p>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+        {acta.checklist?.firma_gestor_publica && (
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Firma del gestor de flota</p>
+            <img src={acta.checklist.firma_gestor_publica} alt="Firma del gestor" className="max-h-28 border border-slate-200 rounded-lg bg-white" />
+          </div>
+        )}
+
         <div className="mt-6 pt-6 border-t border-slate-100">
           {yaFirmada ? (
             <div className="text-center py-6">
@@ -134,7 +157,7 @@ export default function ActaPublica() {
                 </Field>
               </div>
               <div className="mt-2">
-                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos de evidencia (imagen, max 8MB c/u)</p>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos adicionales (opcional, max 8MB c/u)</p>
                 <PhotoPicker fotos={fotos} onChange={setFotos} onError={(msg) => notify(msg, 'error')} />
               </div>
               <div className="mt-4">
@@ -154,7 +177,7 @@ export default function ActaPublica() {
       {confirmando && (
         <Modal title="Confirmar envío" onClose={() => !submitting && setConfirmando(false)}>
           <p className="text-sm text-slate-600">
-            Vas a enviar el acta de {acta.tipo.toLowerCase()} de <strong>{acta.placa}</strong> con tu nombre, fotos y firma.
+            Vas a firmar el acta de {acta.tipo.toLowerCase()} de <strong>{acta.placa}</strong> con tu nombre{fotos.length ? ', tus fotos' : ''} y tu firma.
             Una vez enviada, esta acta queda cerrada y no se puede editar.
           </p>
           <div className="flex justify-end gap-2 mt-5">
