@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate, formatKM } from '../lib/format'
 import { useToast } from '../lib/useToast'
-import { TERMINOS, TERMINOS_TITULO } from '../lib/terminos'
+import { TERMINOS, TERMINOS_TITULO, TERMINOS_ENCABEZADO } from '../lib/terminos'
 import Row from '../components/Row'
 import ChecklistView from '../components/ChecklistView'
 import PhotoPicker from '../components/PhotoPicker'
@@ -187,6 +187,7 @@ export default function ActaPublica() {
                 {verTerminos && (
                   <div className="border-t border-slate-200 bg-slate-50 px-3 py-3 max-h-72 overflow-y-auto text-xs text-slate-700 leading-relaxed flex flex-col gap-2">
                     <p className="font-bold text-slate-800 text-sm">{TERMINOS_TITULO}</p>
+                    {TERMINOS_ENCABEZADO && <p className="font-semibold text-slate-800">{TERMINOS_ENCABEZADO}</p>}
                     {TERMINOS.map((t, i) => <p key={i} className="whitespace-pre-line">{t}</p>)}
                   </div>
                 )}
