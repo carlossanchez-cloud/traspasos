@@ -19,7 +19,8 @@ const fotosDeNovedades = (checklist) => CHECK_ITEMS.flatMap((item) => Object.ent
 
 // Quien firmo que. Desde el paso 19 la firma del gestor va en firma_url y la del cliente en
 // firma_cliente_url. Antes, al firmar el cliente su firma reemplazaba a la del gestor en firma_url: en
-// esas actas (firmadas, sin firma_cliente_url) la unica firma que queda es la del cliente.
+// esas actas (firmadas, sin firma_cliente_url) la unica firma que queda es la del cliente. Sigue pasando
+// en actas nuevas mientras el proyecto de Supabase no tenga corrido el paso 19.
 const rotuloFirmas = (acta) => {
   if (acta.firma_cliente_url) return { firma: 'Firma del gestor de flota', reemplazada: false }
   if (acta.bloqueada) return { firma: 'Firma del cliente', reemplazada: true }
@@ -76,7 +77,8 @@ export default function ActaPhotos({ acta }) {
       )}
       {rotulo.reemplazada && (
         <p className="text-[11px] text-amber-700">
-          Esta acta se firmó antes del ajuste de firmas: la firma del cliente quedó guardada en lugar de la del gestor.
+          En esta acta la firma del cliente quedó guardada en lugar de la del gestor. Pasa cuando la base de datos
+          todavía no tiene el ajuste de firmas (paso SQL 19).
         </p>
       )}
       {vacio && <p className="text-sm text-slate-400">Sin fotos ni firma en esta acta.</p>}
