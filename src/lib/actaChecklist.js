@@ -67,12 +67,12 @@ export const emptyChecklist = () => Object.fromEntries(CHECK_ITEMS.map((k) => [k
 // esquina delantera izquierda, se camina por el lado izquierdo hacia atras, se cruza por detras y se
 // vuelve por el lado derecho; al final, el interior y el tablero.
 export const FOTOS_RECORRIDO = [
-  { key: 'diagonal-delantera-izquierda', label: 'Diagonal delantera izquierda', ayuda: 'Párate en la esquina delantera izquierda y encuadra el frente y el costado izquierdo.' },
-  { key: 'diagonal-trasera-izquierda', label: 'Diagonal trasera izquierda', ayuda: 'Camina por el lado izquierdo hasta la esquina trasera y encuadra la parte trasera y el costado izquierdo.' },
-  { key: 'diagonal-trasera-derecha', label: 'Diagonal trasera derecha', ayuda: 'Pasa por detrás hasta la esquina trasera derecha y encuadra la parte trasera y el costado derecho.' },
-  { key: 'diagonal-delantera-derecha', label: 'Diagonal delantera derecha', ayuda: 'Camina por el lado derecho hasta la esquina delantera y encuadra el frente y el costado derecho.' },
-  { key: 'habitaculo', label: 'Habitáculo interior', ayuda: 'Abre la puerta y toma el interior: sillas, tapizados y piso.' },
-  { key: 'tablero', label: 'Tablero con motor encendido', ayuda: 'Enciende el motor y toma el tablero de instrumentos: kilometraje, combustible y testigos visibles.' },
+  { key: 'diagonal-delantera-izquierda', silueta: 'delantera-izquierda', label: 'Diagonal delantera izquierda', ayuda: 'Párate en la esquina delantera izquierda y encuadra el frente y el costado izquierdo.' },
+  { key: 'diagonal-trasera-izquierda', silueta: 'trasera-izquierda', label: 'Diagonal trasera izquierda', ayuda: 'Camina por el lado izquierdo hasta la esquina trasera y encuadra la parte trasera y el costado izquierdo.' },
+  { key: 'diagonal-trasera-derecha', silueta: 'trasera-derecha', label: 'Diagonal trasera derecha', ayuda: 'Pasa por detrás hasta la esquina trasera derecha y encuadra la parte trasera y el costado derecho.' },
+  { key: 'diagonal-delantera-derecha', silueta: 'delantera-derecha', label: 'Diagonal delantera derecha', ayuda: 'Camina por el lado derecho hasta la esquina delantera y encuadra el frente y el costado derecho.' },
+  { key: 'habitaculo', silueta: 'habitaculo', label: 'Habitáculo interior', ayuda: 'Abre la puerta y toma el interior: sillas, tapizados y piso.' },
+  { key: 'tablero', silueta: 'tablero', label: 'Tablero con motor encendido', ayuda: 'Enciende el motor y toma el tablero de instrumentos: kilometraje, combustible y testigos visibles.' },
 ]
 export const siguienteRecorrido = (fotos) => FOTOS_RECORRIDO.find((f) => !fotos[f.key])
 

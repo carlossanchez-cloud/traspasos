@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../lib/icons'
 import { FOTOS_RECORRIDO, siguienteRecorrido } from '../lib/actaChecklist'
 import PhotoPicker, { CameraModal } from './PhotoPicker'
@@ -12,6 +12,8 @@ export default function FotoRecorrido({ fotos, setFotos, onError }) {
   const siguiente = siguienteRecorrido(fotos)
   const tomadas = FOTOS_RECORRIDO.filter((f) => fotos[f.key]).length
   const total = FOTOS_RECORRIDO.length
+  const urls = useMemo(() => Object.fromEntries(Object.entries(fotos).filter(([, f]) => f).map(([k, f]) => [k, URL.createObjectURL(f)])), [fotos])
+  useEffect(() => () => Object.values(urls).forEach((u) => URL.revokeObjectURL(u)), [urls])
 
   const iniciar = () => {
     if (navigator.mediaDevices?.getUserMedia) setCamera(true)
@@ -53,7 +55,9 @@ export default function FotoRecorrido({ fotos, setFotos, onError }) {
 
       {camera && siguiente && (
         <CameraModal
-          guia={{ titulo: siguiente.label, ayuda: siguiente.ayuda, paso: FOTOS_RECORRIDO.indexOf(siguiente) + 1, total }}
+          guia={{ titulo: siguiente.label, ayuda: siguiente.ayuda, silueta: siguiente.silueta, paso: FOTOS_RECORRIDO.indexOf(siguiente) + 1, total }}
+          miniaturas={FOTOS_RECORRIDO.map((f) => ({ key: f.key, label: f.label, url: urls[f.key] }))}
+          onRepetir={(key) => setFotos((m) => ({ ...m, [key]: undefined }))}
           onCapture={capturar}
           onClose={() => setCamera(false)}
           onFail={(msg) => { setCamera(false); onError(msg) }}
