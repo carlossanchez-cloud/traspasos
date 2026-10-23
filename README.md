@@ -121,6 +121,8 @@ No configurado todavía. Más simple: Vercel o Netlify conectado al repo de GitH
   **Requiere el paso SQL `19_firma_gestor_y_cliente.sql`**: agrega la columna `firma_cliente_url` (antes la firma
   del cliente sobreescribía la del gestor) y vuelve a dejar los permisos que el cliente sin sesión necesita para
   firmar (sin ellos el envío fallaba con "revisa tu conexión"). Se puede correr aunque los pasos 17 y 18 ya estén.
+  **Y también el paso `20_fix_storage_select_anon.sql`**: sin él, al firmar sale "permission denied for table
+  profiles" (la policy de lectura del bucket del paso 07 aplicaba también al cliente sin sesión).
 
 ## Qué falta (a propósito, no es descuido)
 
