@@ -24,7 +24,7 @@ const LINK_PUBLICO_SEGUNDOS = 90 * 24 * 3600
 const EMPTY = { tipo: 'Entrega', placa: '', acta_entrega_id: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
 
 export default function Actas() {
-  const { profile } = useAuth()
+  const { puedeEditar } = useAuth()
   const { toast, notify, clear } = useToast()
   const [placas, setPlacas] = useState([])
   const [actas, setActas] = useState([])
@@ -183,9 +183,11 @@ export default function Actas() {
           <h1 className="text-xl font-black text-slate-800">Actas de entrega y recibido</h1>
           <p className="text-sm text-slate-500">Registro de estado del vehículo al entregar o recibir.</p>
         </div>
-        <button onClick={() => openCreate()} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg">
-          <Icon name="Plus" className="w-4 h-4" /> Nueva acta
-        </button>
+        {puedeEditar && (
+          <button onClick={() => openCreate()} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg">
+            <Icon name="Plus" className="w-4 h-4" /> Nueva acta
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -194,8 +196,8 @@ export default function Actas() {
         <p className="text-sm text-slate-400 py-10 text-center">Sin actas registradas todavía.</p>
       ) : (
         <ListaCiclos actas={actas} filtro={filtro} setFiltro={setFiltro}
-          onVer={setViewing} onEnviar={setCompartiendo}
-          onRecibir={(e) => openCreate({ tipo: 'Recibido', placa: e.placa })} />
+          onVer={setViewing} onEnviar={puedeEditar ? setCompartiendo : null}
+          onRecibir={puedeEditar ? (e) => openCreate({ tipo: 'Recibido', placa: e.placa }) : null} />
       )}
 
       {creating && (
@@ -343,7 +345,7 @@ export default function Actas() {
             </div>
           </div>
 
-          {!viewing.bloqueada && (
+          {!viewing.bloqueada && puedeEditar && (
             <div className="mt-4 pt-4 border-t border-slate-100">
               <EnviarFirma acta={viewing} notify={notify} />
             </div>
@@ -424,7 +426,7 @@ function ListaCiclos({ actas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
             <FilaActa acta={entrega} onVer={onVer} onEnviar={onEnviar} />
             {recibido ? (
               <div className="border-t border-slate-100"><FilaActa acta={recibido} onVer={onVer} onEnviar={onEnviar} /></div>
-            ) : (
+            ) : onRecibir && (
               <div className="border-t border-slate-100 px-4 py-3 flex justify-end">
                 <button onClick={() => onRecibir(entrega)}
                   className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">
@@ -463,11 +465,16 @@ function FilaActa({ acta, onVer, onEnviar, conPlaca }) {
           className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
           ✓ Firmada por el cliente
         </button>
-      ) : (
+      ) : onEnviar ? (
         <button onClick={() => onEnviar(acta)}
           className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white">
           Enviar para firma del cliente
         </button>
+      ) : (
+        // Lector: ve el estado, pero no puede enviar el enlace.
+        <span className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+          Pendiente de firma del cliente
+        </span>
       )}
     </div>
   )

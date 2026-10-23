@@ -13,6 +13,7 @@ rama pase a `main`. Todos se pueden volver a correr sin dañar nada.
 | 19 | `supabase/steps/19_firma_gestor_y_cliente.sql` | Firma del gestor y del cliente por separado (antes la del cliente borraba la del gestor) y permisos del enlace público. |
 | 20 | `supabase/steps/20_fix_storage_select_anon.sql` | Arregla "permission denied for table profiles" al firmar desde el enlace sin sesión. |
 | 21 | `supabase/steps/21_consecutivo_y_ciclo_actas.sql` | N.º consecutivo de actas y control entrega → recibido. Sin él, los recibidos salen sin número y la base de datos no impide entregar dos veces la misma placa. |
+| 22 | `supabase/steps/22_rol_lector.sql` | Tercer rol, Lector (solo ver). Los correos nuevos entran como Lector y la base de datos les impide crear actas, solicitudes o subir fotos. Los usuarios actuales conservan su rol. |
 
 Para confirmar que quedaron:
 
@@ -21,7 +22,13 @@ select column_name from information_schema.columns
 where table_name = 'actas' and column_name in ('firma_cliente_url', 'consecutivo', 'acta_entrega_id');
 ```
 
-Deben salir las 3 filas.
+Deben salir las 3 filas. Para el 22:
+
+```sql
+select column_default from information_schema.columns where table_name = 'profiles' and column_name = 'role';
+```
+
+Debe decir `'lector'::text`.
 
 ## 2. Vercel (proyecto `sustitutos`)
 

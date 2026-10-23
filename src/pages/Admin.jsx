@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
+import { ROLES, rolLabel } from '../lib/roles'
 import { useToast } from '../lib/useToast'
 import Toast from '../components/Toast'
 import Spinner from '../components/Spinner'
@@ -35,15 +36,15 @@ export default function Admin() {
     setNueva(''); load()
   }
 
-  const cambiarRol = async (u) => {
+  const cambiarRol = async (u, nuevoRol) => {
     if (u.id === profile.id) { notify('No puedes cambiar tu propio rol (evita quedarte sin acceso admin).', 'error'); return }
-    const nuevoRol = u.role === 'admin' ? 'gestor' : 'admin'
+    if (nuevoRol === u.role) return
     // Via RPC (security definer), no un update directo del cliente sobre profiles.role:
     // set_user_role() re-verifica en el servidor que quien llama es admin y que no se
     // esta auto-cambiando el rol, en vez de confiar solo en el boton deshabilitado del UI.
     const { error } = await supabase.rpc('set_user_role', { target_id: u.id, target_role: nuevoRol })
     if (error) { notify('Error: ' + error.message, 'error'); return }
-    notify(`${u.email} ahora es ${nuevoRol}.`, 'success')
+    notify(`${u.email} ahora es ${rolLabel(nuevoRol)}.`, 'success')
     load()
   }
 
@@ -68,7 +69,10 @@ export default function Admin() {
 
       <div className="bg-white border border-slate-200 rounded-xl p-5">
         <h2 className="text-sm font-black text-slate-500 uppercase mb-3">Usuarios y roles</h2>
-        <p className="text-xs text-slate-400 mb-3">Solo entra quien tenga correo @rentandes.com. Aparecen aquí en cuanto inician sesión por primera vez.</p>
+        <p className="text-xs text-slate-400 mb-2">Solo entra quien tenga correo @rentandes.com. Aparecen aquí en cuanto inician sesión por primera vez, como <strong>Lector</strong>.</p>
+        <ul className="text-xs text-slate-500 mb-3 flex flex-col gap-0.5">
+          {ROLES.map((r) => <li key={r.key}><strong>{r.label}:</strong> {r.ayuda}</li>)}
+        </ul>
         {loading ? (
           <Spinner label="Cargando usuarios..." className="py-6" />
         ) : usuarios.length === 0 ? (
@@ -81,15 +85,11 @@ export default function Admin() {
                   <p className="text-sm font-medium text-slate-700">{u.email}{u.id === profile.id && <span className="text-slate-400 font-normal"> (tú)</span>}</p>
                   <p className="text-[11px] text-slate-400">{u.full_name || 'sin nombre'}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${u.role === 'admin' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                    {u.role}
-                  </span>
-                  <button onClick={() => cambiarRol(u)} disabled={u.id === profile.id}
-                    className="text-xs font-bold text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
-                    {u.role === 'admin' ? 'Bajar a gestor' : 'Subir a admin'}
-                  </button>
-                </div>
+                <select value={u.role} onChange={(e) => cambiarRol(u, e.target.value)} disabled={u.id === profile.id}
+                  title={u.id === profile.id ? 'No puedes cambiar tu propio rol' : 'Cambiar rol'}
+                  className={`text-xs font-bold px-2 py-1.5 rounded-lg border disabled:opacity-60 disabled:cursor-not-allowed ${u.role === 'admin' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : u.role === 'gestor' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                  {ROLES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                </select>
               </div>
             ))}
           </div>

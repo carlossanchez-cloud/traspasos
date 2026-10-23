@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/AuthProvider'
 import { Icon } from './lib/icons'
+import { rolLabel } from './lib/roles'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Mapa from './pages/Mapa'
@@ -53,6 +54,7 @@ function Shell({ children }) {
         </div>
         <div className="hidden md:flex flex-col gap-2 px-4 py-4 border-t border-white/10 text-xs text-slate-400">
           <span className="truncate">{profile?.email}</span>
+          <span className="text-[11px] text-slate-500">{rolLabel(profile?.role)}</span>
           <button onClick={signOut} className="flex items-center gap-1.5 text-slate-300 hover:text-white">
             <Icon name="LogOut" className="w-3.5 h-3.5" /> Cerrar sesión
           </button>

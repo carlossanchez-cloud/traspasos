@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { puedeEditar as rolPuedeEditar } from './roles'
 
 const AuthContext = createContext(null)
 
@@ -39,9 +40,10 @@ export function AuthProvider({ children }) {
 
   const loading = session === undefined || (session && profile === undefined)
   const isAdmin = profile?.role === 'admin'
+  const puedeEditar = rolPuedeEditar(profile?.role)
 
   return (
-    <AuthContext.Provider value={{ session, profile, profileError, loading, isAdmin, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ session, profile, profileError, loading, isAdmin, puedeEditar, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   )

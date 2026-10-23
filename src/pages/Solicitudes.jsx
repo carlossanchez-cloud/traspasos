@@ -12,7 +12,7 @@ import Spinner, { ButtonSpinner } from '../components/Spinner'
 const EMPTY = { placa_contrato: '', tipo_vehiculo: 'Automóvil', ciudad: '', admin_flota: '', cliente_empresa: '', fecha_inicio: todayISO(), fecha_fin: '', observaciones: '' }
 
 export default function Solicitudes() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, puedeEditar } = useAuth()
   const { toast, notify, clear } = useToast()
   const [ciudades, setCiudades] = useState([])
   const [form, setForm] = useState(EMPTY)
@@ -87,6 +87,12 @@ export default function Solicitudes() {
       <h1 className="text-xl font-black text-slate-800 mb-1">Solicitar vehículo sustituto</h1>
       <p className="text-sm text-slate-500 mb-6">El administrador asigna un vehículo disponible según ciudad y tipo.</p>
 
+      {!puedeEditar && (
+        <p className="text-sm rounded-xl px-4 py-3 mb-4 bg-slate-50 text-slate-600 border border-slate-200">
+          Tu usuario es de <strong>solo lectura</strong>: no puedes enviar solicitudes. Pide a un administrador que te cambie el rol.
+        </p>
+      )}
+      {puedeEditar && (
       <div className="bg-white border border-slate-200 rounded-xl p-5 grid sm:grid-cols-2 gap-3">
         <Field label="Placa de tu vehículo (entra a taller)"><input value={form.placa_contrato} onChange={set('placa_contrato')} className={inputCls} /></Field>
         <Field label="Tipo de vehículo requerido">
@@ -113,6 +119,7 @@ export default function Solicitudes() {
           </button>
         </div>
       </div>
+      )}
 
       {isAdmin && (
         <div className="mt-10">
