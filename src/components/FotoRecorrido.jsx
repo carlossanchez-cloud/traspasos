@@ -9,6 +9,7 @@ import PhotoPicker, { CameraModal } from './PhotoPicker'
 // asi dos disparos seguidos no caen en la misma casilla).
 export default function FotoRecorrido({ fotos, setFotos, onError }) {
   const [camera, setCamera] = useState(false)
+  const [abierto, setAbierto] = useState(false) // lista de las 6 casillas con sus botones, plegada por defecto
   const siguiente = siguienteRecorrido(fotos)
   const tomadas = FOTOS_RECORRIDO.filter((f) => fotos[f.key]).length
   const total = FOTOS_RECORRIDO.length
@@ -28,8 +29,8 @@ export default function FotoRecorrido({ fotos, setFotos, onError }) {
     <div className="rounded-lg border border-slate-300 overflow-hidden">
       <div className="bg-slate-200 px-3 py-2.5">
         <p className="text-sm text-slate-800">
-          Se necesitan <strong>las 4 fotos diagonales</strong>, una del <strong>habitáculo</strong> y una del
-          <strong> tablero con el motor encendido</strong>. Da la vuelta al carro empezando por la esquina delantera izquierda.
+          <strong>4 diagonales</strong>, <strong>habitáculo</strong> y <strong>tablero con motor encendido</strong>,
+          empezando por la esquina delantera izquierda.
         </p>
         {siguiente ? (
           <button type="button" onClick={iniciar}
@@ -41,18 +42,40 @@ export default function FotoRecorrido({ fotos, setFotos, onError }) {
           <p className="mt-2 text-sm font-bold text-emerald-700">✓ Recorrido completo ({total} de {total})</p>
         )}
       </div>
-      <div className="bg-slate-100 border-t border-slate-300 px-3 py-1 divide-y divide-slate-300/60">
-        {FOTOS_RECORRIDO.map((f, i) => (
-          <div key={f.key} className="py-2">
-            <p className={`text-xs font-bold mb-1.5 ${fotos[f.key] ? 'text-emerald-700' : 'text-slate-700'}`}>
-              {fotos[f.key] ? '✓' : `${i + 1}.`} {f.label}
-            </p>
-            <PhotoPicker single fotos={fotos[f.key] ? [fotos[f.key]] : []} onError={onError}
-              guia={{ titulo: f.label, ayuda: f.ayuda, silueta: f.silueta, paso: i + 1, total }}
-              onChange={(fs) => setFotos((m) => ({ ...m, [f.key]: fs[0] }))} />
-          </div>
-        ))}
+      {/* Plegado: solo las 6 miniaturas (numero si falta). Tocar una o "Subir una por una" despliega las
+          casillas con Tomar foto / Subir archivo / Repetir. */}
+      <div className="bg-slate-100 border-t border-slate-300 px-3 py-2.5">
+        <div className="grid grid-cols-6 gap-1.5">
+          {FOTOS_RECORRIDO.map((f, i) => (
+            <button key={f.key} type="button" onClick={() => setAbierto(true)} title={f.label} aria-label={f.label}
+              className={`relative aspect-square rounded-md overflow-hidden border-2 ${urls[f.key] ? 'border-emerald-500' : 'border-dashed border-slate-300 bg-white'}`}>
+              {urls[f.key]
+                ? <img src={urls[f.key]} alt="" className="w-full h-full object-cover" />
+                : <span className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm font-bold">{i + 1}</span>}
+              {urls[f.key] && <span className="absolute top-0.5 right-0.5 bg-emerald-500 text-white text-[9px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center">✓</span>}
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={() => setAbierto((a) => !a)}
+          className="mt-2 w-full flex items-center justify-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-800">
+          {abierto ? 'Ocultar casillas' : 'Subir o repetir una por una'}
+          <span className={`text-[10px] transition-transform ${abierto ? 'rotate-180' : ''}`}>▼</span>
+        </button>
       </div>
+      {abierto && (
+        <div className="bg-slate-100 border-t border-slate-300 px-3 py-1 divide-y divide-slate-300/60">
+          {FOTOS_RECORRIDO.map((f, i) => (
+            <div key={f.key} className="py-2">
+              <p className={`text-xs font-bold mb-1.5 ${fotos[f.key] ? 'text-emerald-700' : 'text-slate-700'}`}>
+                {fotos[f.key] ? '✓' : `${i + 1}.`} {f.label}
+              </p>
+              <PhotoPicker single fotos={fotos[f.key] ? [fotos[f.key]] : []} onError={onError}
+                guia={{ titulo: f.label, ayuda: f.ayuda, silueta: f.silueta, paso: i + 1, total }}
+                onChange={(fs) => setFotos((m) => ({ ...m, [f.key]: fs[0] }))} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {camera && siguiente && (
         <CameraModal
