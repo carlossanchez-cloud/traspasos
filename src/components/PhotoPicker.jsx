@@ -139,29 +139,33 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
   const tomadas = thumbs.filter((t) => t.url).length
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black flex flex-col">
+    // En vertical: titulo arriba, video y miniaturas al medio, controles abajo. En horizontal (apaisado:)
+    // los controles pasan a una columna a la derecha y el titulo flota sobre el video, para que la camara
+    // ocupe casi toda la pantalla.
+    <div className="fixed inset-0 z-[60] bg-black flex flex-col apaisado:flex-row">
+      <div className="relative flex-1 flex flex-col min-h-0 min-w-0">
       {guia && (
-        <div className="bg-slate-900 text-white px-4 py-2.5">
-          {guia.paso && <p className="text-xs font-bold text-emerald-300">Foto {guia.paso} de {guia.total}</p>}
-          <p className="text-lg font-black leading-tight">{guia.titulo}</p>
-          <p className="text-xs text-slate-300 mt-0.5">{guia.ayuda}</p>
+        <div className="bg-slate-900 text-white px-4 py-2.5 apaisado:absolute apaisado:top-0 apaisado:left-0 apaisado:right-16 apaisado:z-10 apaisado:bg-black/55 apaisado:px-3 apaisado:py-1 apaisado:pointer-events-none">
+          {guia.paso && <p className="text-xs font-bold text-emerald-300 apaisado:text-[10px] apaisado:inline apaisado:mr-2">Foto {guia.paso} de {guia.total}</p>}
+          <p className="text-lg font-black leading-tight apaisado:text-sm apaisado:inline">{guia.titulo}</p>
+          <p className="text-xs text-slate-300 mt-0.5 apaisado:hidden">{guia.ayuda}</p>
         </div>
       )}
       <div className="flex-1 flex min-h-0">
         <div className="relative flex-1 flex items-center justify-center overflow-hidden">
-          <video ref={videoRef} autoPlay playsInline muted className="max-w-full max-h-full" />
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
           {guia?.silueta && (
             // Guia chica en la esquina superior izquierda, para no tapar lo que se esta fotografiando.
-            <div className="absolute top-2 left-2 w-32 sm:w-44 rounded-lg bg-black/60 border border-white/30 p-1.5 pointer-events-none">
-              <p className="text-[10px] font-bold text-white/80 uppercase mb-1">Guía</p>
-              <div className="h-16 sm:h-24 flex items-center justify-center"><Silueta tipo={guia.silueta} /></div>
+            <div className="absolute top-2 left-2 w-32 sm:w-44 rounded-lg bg-black/60 border border-white/30 p-1.5 pointer-events-none apaisado:top-auto apaisado:bottom-2 apaisado:w-28 apaisado:p-1">
+              <p className="text-[10px] font-bold text-white/80 uppercase mb-1 apaisado:hidden">Guía</p>
+              <div className="h-16 sm:h-24 flex items-center justify-center apaisado:h-12"><Silueta tipo={guia.silueta} /></div>
             </div>
           )}
           {!stream && <p className="absolute text-white text-sm px-6 text-center">Abriendo cámara… acepta el permiso si el navegador lo pide.</p>}
           {flash && <div className="absolute inset-0 bg-white/70" />}
         </div>
         {thumbs.length > 0 && (
-          <div className="w-20 sm:w-28 shrink-0 bg-slate-950 overflow-y-auto p-1.5 flex flex-col gap-1.5">
+          <div className="w-20 sm:w-28 shrink-0 bg-slate-950 overflow-y-auto p-1.5 flex flex-col gap-1.5 apaisado:w-14 apaisado:p-1 apaisado:gap-1">
             {thumbs.map((t, i) => (
               <button key={t.key} type="button" disabled={!t.url} onClick={() => setViendo(t)}
                 className={`relative aspect-square rounded-md overflow-hidden border-2 shrink-0 ${t.url ? 'border-emerald-400' : 'border-dashed border-slate-600'}`}>
@@ -175,19 +179,20 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
           </div>
         )}
       </div>
-      <div className="flex items-center justify-between gap-3 p-4 bg-black">
-        <div className="w-24 flex flex-col items-start gap-1">
+      </div>
+      <div className="flex items-center justify-between gap-3 p-4 bg-black apaisado:flex-col-reverse apaisado:w-20 apaisado:px-2 apaisado:py-3">
+        <div className="w-24 flex flex-col items-start gap-1 apaisado:w-auto apaisado:items-center">
           {flashDisponible && (
             <button type="button" onClick={toggleFlash} aria-pressed={flashOn}
               className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg border ${flashOn ? 'bg-yellow-400 text-slate-900 border-yellow-400' : 'text-white border-white/40'}`}>
-              <Icon name="Zap" className="w-3.5 h-3.5" /> Flash {flashOn ? 'on' : 'off'}
+              <Icon name="Zap" className="w-3.5 h-3.5" /> <span className="apaisado:hidden">Flash </span>{flashOn ? 'on' : 'off'}
             </button>
           )}
-          <span className="text-white text-xs">{tomadas} tomada(s)</span>
+          <span className="text-white text-xs apaisado:text-[10px] apaisado:text-center">{tomadas} tomada(s)</span>
         </div>
         <button type="button" onClick={capturar} disabled={!stream} aria-label="Tomar foto"
-          className="w-16 h-16 rounded-full bg-white border-4 border-slate-400 disabled:opacity-40" />
-        <button type="button" onClick={onClose} className="w-24 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg">
+          className="w-16 h-16 rounded-full bg-white border-4 border-slate-400 disabled:opacity-40 apaisado:w-14 apaisado:h-14 shrink-0" />
+        <button type="button" onClick={onClose} className="w-24 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg apaisado:w-full apaisado:text-xs apaisado:px-1">
           Listo
         </button>
       </div>

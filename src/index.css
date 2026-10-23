@@ -1,4 +1,8 @@
 @import "tailwindcss";
+
+/* Celular en horizontal: pantalla apaisada y baja. Lo usa la camara de las actas para pasar los controles
+   a una columna lateral y dejarle casi toda la pantalla al video. No aplica a computadores (son altos). */
+@custom-variant apaisado (@media (orientation: landscape) and (max-height: 540px));
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 
 @theme {
