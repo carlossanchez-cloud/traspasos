@@ -5,7 +5,7 @@ import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
 import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
-import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto } from '../lib/actaChecklist'
+import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto, FOTOS_RECORRIDO } from '../lib/actaChecklist'
 import { publicActaUrl, waShareUrl, mailtoShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -14,6 +14,7 @@ import SignaturePad from '../components/SignaturePad'
 import ActaPhotos from '../components/ActaPhotos'
 import ChecklistView from '../components/ChecklistView'
 import PhotoPicker from '../components/PhotoPicker'
+import FotoRecorrido from '../components/FotoRecorrido'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
 
 const EMPTY = { tipo: 'Entrega', placa: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
@@ -27,6 +28,7 @@ export default function Actas() {
   const [form, setForm] = useState(EMPTY)
   const [checklist, setChecklist] = useState(emptyChecklist())
   const [fotos, setFotos] = useState([])
+  const [fotosRecorrido, setFotosRecorrido] = useState({}) // FOTOS_RECORRIDO key -> File
   const [fotosNovedad, setFotosNovedad] = useState({}) // fotoKey(item, parte) -> File
   const [firma, setFirma] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -50,7 +52,7 @@ export default function Actas() {
   const openCreate = () => {
     setForm({ ...EMPTY, placa: placas[0] || '' })
     setChecklist(emptyChecklist())
-    setFotos([]); setFotosNovedad({}); setFirma(null); setExpanded({})
+    setFotos([]); setFotosRecorrido({}); setFotosNovedad({}); setFirma(null); setExpanded({})
     setCreating(true)
   }
 
@@ -75,6 +77,11 @@ export default function Actas() {
 
   const guardar = async () => {
     if (!form.placa || !form.cliente) { notify('Placa y cliente son obligatorios.', 'error'); return }
+    const faltanRecorrido = FOTOS_RECORRIDO.filter((f) => !fotosRecorrido[f.key])
+    if (faltanRecorrido.length) {
+      notify(`Faltan fotos del recorrido: ${faltanRecorrido.map((f) => f.label).join(', ')}.`, 'error')
+      return
+    }
     const novedades = novedadesConFoto(checklist)
     const sinFoto = novedades.filter((n) => !fotosNovedad[n.key])
     if (sinFoto.length) {
@@ -83,7 +90,12 @@ export default function Actas() {
     }
     setSaving(true)
     try {
-      const fotos_urls = fotos.length ? await uploadFiles(fotos, `${form.placa}/fotos`) : []
+      // Las del recorrido van primero en fotos_urls (asi el conteo y la galeria las incluyen) y ademas
+      // quedan en checklist.fotos_recorrido con su nombre, para mostrarlas rotuladas en el detalle.
+      const fotos_recorrido = {}
+      for (const f of FOTOS_RECORRIDO) fotos_recorrido[f.key] = (await uploadFiles([fotosRecorrido[f.key]], `${form.placa}/recorrido`))[0]
+      const adicionales = fotos.length ? await uploadFiles(fotos, `${form.placa}/fotos`) : []
+      const fotos_urls = [...Object.values(fotos_recorrido), ...adicionales]
       const firma_url = firma ? (await uploadFiles([firma], `${form.placa}/firma`))[0] : null
       // Cada foto de novedad se guarda dentro de su parte (partes[parte].foto = path en storage).
       const conFotos = structuredClone(checklist)
@@ -92,7 +104,7 @@ export default function Actas() {
       }
       const { error } = await supabase.from('actas').insert({
         ...form, kilometraje: form.kilometraje ? Number(form.kilometraje) : null,
-        checklist: conResumen(conFotos), fotos_urls, firma_url,
+        checklist: { ...conResumen(conFotos), fotos_recorrido }, fotos_urls, firma_url,
       })
       if (error) throw error
       notify('Acta guardada.', 'success')
@@ -217,6 +229,11 @@ export default function Actas() {
             </div>
           </div>
 
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos del recorrido (obligatorias)</p>
+            <FotoRecorrido fotos={fotosRecorrido} setFotos={setFotosRecorrido} onError={(msg) => notify(msg, 'error')} />
+          </div>
+
           {novedadesConFoto(checklist).length > 0 && (
             <div className="mt-4">
               <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos de las novedades (obligatorias)</p>
@@ -241,7 +258,7 @@ export default function Actas() {
           )}
 
           <div className="mt-4">
-            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos generales (4-6, imagen, max 8MB c/u)</p>
+            <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos adicionales (opcional, max 8MB c/u)</p>
             <PhotoPicker fotos={fotos} onChange={setFotos} onError={(msg) => notify(msg, 'error')} />
           </div>
           <div className="mt-4">

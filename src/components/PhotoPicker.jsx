@@ -68,7 +68,8 @@ export default function PhotoPicker({ fotos, onChange, onError, single }) {
   )
 }
 
-function CameraModal({ onCapture, onClose, onFail }) {
+// Con `guia` ({ titulo, ayuda, paso, total }) muestra encima de la camara que foto toca tomar.
+export function CameraModal({ onCapture, onClose, onFail, guia }) {
   const videoRef = useRef(null)
   const [stream, setStream] = useState(null)
   const [tomadas, setTomadas] = useState(0)
@@ -115,9 +116,16 @@ function CameraModal({ onCapture, onClose, onFail }) {
         <video ref={videoRef} autoPlay playsInline muted className="max-w-full max-h-full" />
         {!stream && <p className="absolute text-white text-sm">Abriendo cámara… acepta el permiso si el navegador lo pide.</p>}
         {flash && <div className="absolute inset-0 bg-white/70" />}
+        {guia && (
+          <div className="absolute top-0 inset-x-0 bg-black/70 text-white px-4 py-3">
+            <p className="text-xs font-bold text-emerald-300">Foto {guia.paso} de {guia.total}</p>
+            <p className="text-lg font-black leading-tight">{guia.titulo}</p>
+            <p className="text-xs text-slate-200 mt-0.5">{guia.ayuda}</p>
+          </div>
+        )}
       </div>
       <div className="flex items-center justify-between gap-3 p-4 bg-black">
-        <span className="text-white text-sm w-24">{tomadas} tomada(s)</span>
+        <span className="text-white text-sm w-24">{guia ? '' : `${tomadas} tomada(s)`}</span>
         <button type="button" onClick={capturar} disabled={!stream} aria-label="Tomar foto"
           className="w-16 h-16 rounded-full bg-white border-4 border-slate-400 disabled:opacity-40" />
         <button type="button" onClick={onClose} className="w-24 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg">

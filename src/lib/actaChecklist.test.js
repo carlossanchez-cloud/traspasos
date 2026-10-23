@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isValidImage, emptyChecklist, esNovedad, estadosParte, resumenEstado, conResumen, novedadesConFoto, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
+import { isValidImage, emptyChecklist, esNovedad, estadosParte, resumenEstado, conResumen, novedadesConFoto, FOTOS_RECORRIDO, siguienteRecorrido, CHECK_ITEMS, SUB_ITEMS } from './actaChecklist.js'
 
 test('isValidImage: acepta imagen <= 8MB, rechaza otro tipo o mas de 8MB', () => {
   assert.equal(isValidImage({ type: 'image/png', size: 1024 }), true)
@@ -61,4 +61,12 @@ test('novedadesConFoto: pide foto de Regular/Malo/Vencido, no de Bueno ni No se 
   assert.deepEqual(n.map((x) => x.parte), ['Puerta delantera izquierda', 'SOAT', 'Extintor'])
   assert.equal(n[0].obs, 'sumido')
   assert.equal(n[0].key, 'Carrocería::Puerta delantera izquierda')
+})
+
+test('siguienteRecorrido: sigue el orden de la vuelta al carro y salta las ya tomadas', () => {
+  assert.equal(FOTOS_RECORRIDO.length, 6)
+  assert.equal(siguienteRecorrido({}).label, 'Diagonal delantera izquierda')
+  const tomadas = { 'diagonal-delantera-izquierda': 1, 'diagonal-trasera-derecha': 1 }
+  assert.equal(siguienteRecorrido(tomadas).label, 'Diagonal trasera izquierda')
+  assert.equal(siguienteRecorrido(Object.fromEntries(FOTOS_RECORRIDO.map((f) => [f.key, 1]))), undefined)
 })

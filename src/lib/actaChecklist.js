@@ -63,5 +63,18 @@ export const emptyChecklist = () => Object.fromEntries(CHECK_ITEMS.map((k) => [k
   ? { ...emptyEntry(), partes: Object.fromEntries(SUB_ITEMS[k].map((p) => [p, emptyEntry(estadosParte(k)[0])])) }
   : emptyEntry()]))
 
+// Fotos obligatorias del acta, en el orden en que se toman dando la vuelta al carro: se arranca en la
+// esquina delantera izquierda, se camina por el lado izquierdo hacia atras, se cruza por detras y se
+// vuelve por el lado derecho; al final, el interior y el tablero.
+export const FOTOS_RECORRIDO = [
+  { key: 'diagonal-delantera-izquierda', label: 'Diagonal delantera izquierda', ayuda: 'Párate en la esquina delantera izquierda y encuadra el frente y el costado izquierdo.' },
+  { key: 'diagonal-trasera-izquierda', label: 'Diagonal trasera izquierda', ayuda: 'Camina por el lado izquierdo hasta la esquina trasera y encuadra la parte trasera y el costado izquierdo.' },
+  { key: 'diagonal-trasera-derecha', label: 'Diagonal trasera derecha', ayuda: 'Pasa por detrás hasta la esquina trasera derecha y encuadra la parte trasera y el costado derecho.' },
+  { key: 'diagonal-delantera-derecha', label: 'Diagonal delantera derecha', ayuda: 'Camina por el lado derecho hasta la esquina delantera y encuadra el frente y el costado derecho.' },
+  { key: 'habitaculo', label: 'Habitáculo interior', ayuda: 'Abre la puerta y toma el interior: sillas, tapizados y piso.' },
+  { key: 'tablero', label: 'Tablero con motor encendido', ayuda: 'Enciende el motor y toma el tablero de instrumentos: kilometraje, combustible y testigos visibles.' },
+]
+export const siguienteRecorrido = (fotos) => FOTOS_RECORRIDO.find((f) => !fotos[f.key])
+
 export const MAX_FILE_BYTES = 8 * 1024 * 1024 // 8MB — fotos de celular normales caben, evita subir cualquier cosa gigante
 export const isValidImage = (file) => file.type.startsWith('image/') && file.size <= MAX_FILE_BYTES
