@@ -48,6 +48,7 @@ export default function FotoRecorrido({ fotos, setFotos, onError }) {
               {fotos[f.key] ? '✓' : `${i + 1}.`} {f.label}
             </p>
             <PhotoPicker single fotos={fotos[f.key] ? [fotos[f.key]] : []} onError={onError}
+              guia={{ titulo: f.label, ayuda: f.ayuda, silueta: f.silueta, paso: i + 1, total }}
               onChange={(fs) => setFotos((m) => ({ ...m, [f.key]: fs[0] }))} />
           </div>
         ))}

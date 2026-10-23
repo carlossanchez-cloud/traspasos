@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../lib/icons'
 import { isValidImage } from '../lib/actaChecklist'
 import Silueta from './Silueta'
+import { precargarSiluetas } from '../lib/siluetas'
 
 // Selector de fotos con dos caminos: "Subir archivos" (galeria / disco) y "Tomar foto" (camara en vivo
 // via getUserMedia, en celular y en computador; el navegador pide el permiso). Si la camara no esta
 // disponible o se niega el permiso, cae al input con capture, que en celular abre la app de camara.
 // Las fotos se acumulan: cada subida o captura se suma a las anteriores, y cada una se puede quitar.
 // Con `single` maneja una sola foto (la de una novedad puntual): reemplaza en vez de sumar y la camara
-// se cierra sola al disparar.
-export default function PhotoPicker({ fotos, onChange, onError, single }) {
+// se cierra sola al disparar. `guia` (opcional) se pasa tal cual a la camara.
+export default function PhotoPicker({ fotos, onChange, onError, single, guia }) {
   const fileRef = useRef(null)
   const captureRef = useRef(null)
   const [camera, setCamera] = useState(false)
@@ -60,6 +61,7 @@ export default function PhotoPicker({ fotos, onChange, onError, single }) {
 
       {camera && (
         <CameraModal
+          guia={guia}
           onCapture={(file) => { add([file]); if (single) setCamera(false) }}
           onClose={() => setCamera(false)}
           onFail={(msg) => { setCamera(false); onError(msg); captureRef.current.click() }}
@@ -84,6 +86,8 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
   // por ref para no reabrir la camara cada vez.
   const onFailRef = useRef(onFail)
   useEffect(() => { onFailRef.current = onFail })
+
+  useEffect(() => { if (guia?.silueta) precargarSiluetas() }, [guia?.silueta])
 
   useEffect(() => {
     let s = null
@@ -124,7 +128,7 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
     <div className="fixed inset-0 z-[60] bg-black flex flex-col">
       {guia && (
         <div className="bg-slate-900 text-white px-4 py-2.5">
-          <p className="text-xs font-bold text-emerald-300">Foto {guia.paso} de {guia.total}</p>
+          {guia.paso && <p className="text-xs font-bold text-emerald-300">Foto {guia.paso} de {guia.total}</p>}
           <p className="text-lg font-black leading-tight">{guia.titulo}</p>
           <p className="text-xs text-slate-300 mt-0.5">{guia.ayuda}</p>
         </div>
@@ -133,8 +137,10 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
         <div className="relative flex-1 flex items-center justify-center overflow-hidden">
           <video ref={videoRef} autoPlay playsInline muted className="max-w-full max-h-full" />
           {guia?.silueta && (
-            <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-              <Silueta tipo={guia.silueta} />
+            // Guia chica en la esquina superior izquierda, para no tapar lo que se esta fotografiando.
+            <div className="absolute top-2 left-2 w-32 sm:w-44 rounded-lg bg-black/60 border border-white/30 p-1.5 pointer-events-none">
+              <p className="text-[10px] font-bold text-white/80 uppercase mb-1">Guía</p>
+              <div className="h-16 sm:h-24 flex items-center justify-center"><Silueta tipo={guia.silueta} /></div>
             </div>
           )}
           {!stream && <p className="absolute text-white text-sm px-6 text-center">Abriendo cámara… acepta el permiso si el navegador lo pide.</p>}
