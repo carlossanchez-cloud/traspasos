@@ -59,7 +59,7 @@ export default function Ficha() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <Link to="/" className="flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-800">
+        <Link to="/sustitutos" className="flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-800">
           <Icon name="ArrowLeft" className="w-4 h-4" /> Volver a la flota
         </Link>
         <button onClick={downloadPDF} disabled={exporting}

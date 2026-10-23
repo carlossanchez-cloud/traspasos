@@ -11,10 +11,12 @@ import Informes from './pages/Informes'
 import Ficha from './pages/Ficha'
 import ActaPublica from './pages/ActaPublica'
 import NotFound from './pages/NotFound'
+import MenuPrincipal from './pages/MenuPrincipal'
+import ModuloProximo from './pages/ModuloProximo'
 import Spinner from './components/Spinner'
 
 const NAV = [
-  { to: '/', label: 'Flota', icon: 'Car', end: true },
+  { to: '/sustitutos', label: 'Flota', icon: 'Car', end: true },
   { to: '/mapa', label: 'Mapa', icon: 'Map' },
   { to: '/solicitudes', label: 'Solicitar', icon: 'ClipboardList' },
   { to: '/actas', label: 'Actas', icon: 'FileText' },
@@ -35,6 +37,9 @@ function Shell({ children }) {
             <img src="/rentandes-logo.png" alt="rentandes" className="h-6 w-auto mb-1.5" />
             <p className="text-xs text-slate-400">Flota Sustitutos</p>
           </div>
+          <NavLink to="/" end className={navClass}>
+            <Icon name="Menu" className="w-4 h-4" /> Menú principal
+          </NavLink>
           {NAV.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
               <Icon name={item.icon} className="w-4 h-4" /> {item.label}
@@ -77,7 +82,7 @@ function Gate({ children }) {
       </div>
     )
   }
-  return <Shell>{children}</Shell>
+  return children
 }
 
 function RequireAdmin({ children }) {
@@ -94,15 +99,25 @@ export default function App() {
           <Route path="/acta-publica/:token" element={<ActaPublica />} />
           <Route path="/*" element={
             <Gate>
+              {/* Despues del login se llega al menu principal ("/"); desde ahi se entra a cada modulo. */}
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/flota/:id" element={<Ficha />} />
-                <Route path="/mapa" element={<Mapa />} />
-                <Route path="/solicitudes" element={<Solicitudes />} />
-                <Route path="/actas" element={<Actas />} />
-                <Route path="/informes" element={<Informes />} />
-                <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
-                <Route path="*" element={<NotFound />} />
+                <Route path="/" element={<MenuPrincipal />} />
+                <Route path="/inventario" element={<ModuloProximo titulo="Inventario" />} />
+                <Route path="/gestion-flota" element={<RequireAdmin><ModuloProximo titulo="Gestión de flota" /></RequireAdmin>} />
+                <Route path="/*" element={
+                  <Shell>
+                    <Routes>
+                      <Route path="/sustitutos" element={<Dashboard />} />
+                      <Route path="/flota/:id" element={<Ficha />} />
+                      <Route path="/mapa" element={<Mapa />} />
+                      <Route path="/solicitudes" element={<Solicitudes />} />
+                      <Route path="/actas" element={<Actas />} />
+                      <Route path="/informes" element={<Informes />} />
+                      <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Shell>
+                } />
               </Routes>
             </Gate>
           } />
