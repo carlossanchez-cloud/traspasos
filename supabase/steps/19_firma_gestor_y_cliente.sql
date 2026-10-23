@@ -92,3 +92,6 @@ grant execute on function submit_acta_publica(uuid, text, text, text[], text) to
 
 revoke all on function get_acta_publica(uuid) from public;
 grant execute on function get_acta_publica(uuid) to anon;
+
+-- Que la API de Supabase vea ya la columna nueva.
+notify pgrst, 'reload schema';

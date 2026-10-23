@@ -32,3 +32,12 @@ test('entregaAbierta: la entrega de la placa que aun no tiene recibido', () => {
   assert.equal(entregaAbierta(actas, 'ZZZ999'), null)
   assert.equal(entregaAbierta(actas.slice(0, 2), 'AAA111'), null)
 })
+
+test('agruparActas: sin la columna (paso 21 sin correr) toma la entrega de checklist.acta_entrega_id', () => {
+  const actas = [
+    acta('e1', 'Entrega', 'AAA111', '2026-10-01'),
+    acta('r1', 'Recibido', 'AAA111', '2026-10-05', { checklist: { acta_entrega_id: 'e1' } }),
+  ]
+  assert.equal(agruparActas(actas).ciclos[0].recibido.id, 'r1')
+  assert.equal(entregaAbierta(actas, 'AAA111'), null)
+})

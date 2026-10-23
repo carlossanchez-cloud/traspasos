@@ -135,12 +135,19 @@ export default function Actas() {
       const fotos_publicas = publicas.map((p, i) => ({ label: p.label, url: firmadas[i].signedUrl }))
       const firma_gestor_publica = firmadas[publicas.length].signedUrl
       const { acta_entrega_id, ...datos } = form
-      const { error } = await supabase.from('actas').insert({
+      const entregaId = form.tipo === 'Recibido' ? acta_entrega_id || null : null
+      const fila = {
         ...datos, kilometraje: form.kilometraje ? Number(form.kilometraje) : null,
-        // Solo los Recibido llevan la entrega que cierran; el consecutivo lo pone la base de datos.
-        ...(form.tipo === 'Recibido' ? { acta_entrega_id: acta_entrega_id || null } : {}),
-        checklist: { ...conResumen(conFotos), fotos_recorrido, fotos_publicas, firma_gestor_publica }, fotos_urls, firma_url,
-      })
+        // La entrega que cierra un Recibido tambien queda en el checklist: asi el ciclo se ve aunque el
+        // proyecto de Supabase todavia no tenga la columna acta_entrega_id (paso SQL 21), y ese paso la
+        // copia a la columna al correrlo. El consecutivo lo pone la base de datos.
+        checklist: { ...conResumen(conFotos), fotos_recorrido, fotos_publicas, firma_gestor_publica, ...(entregaId ? { acta_entrega_id: entregaId } : {}) },
+        fotos_urls, firma_url,
+      }
+      let { error } = await supabase.from('actas').insert(form.tipo === 'Recibido' ? { ...fila, acta_entrega_id: entregaId } : fila)
+      if (error && form.tipo === 'Recibido' && /acta_entrega_id/.test(error.message)) {
+        ;({ error } = await supabase.from('actas').insert(fila))
+      }
       if (error) throw error
       notify('Acta guardada. Ya puedes enviarla al cliente para su firma.', 'success')
       setCreating(false)

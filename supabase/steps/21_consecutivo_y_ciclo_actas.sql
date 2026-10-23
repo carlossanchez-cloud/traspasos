@@ -26,6 +26,11 @@ begin
     update actas set consecutivo = n where id = r.id;
   end loop;
 
+  -- Recibidos guardados antes de este paso: la app dejo la entrega en checklist.acta_entrega_id.
+  update actas a set acta_entrega_id = (a.checklist->>'acta_entrega_id')::uuid
+  where a.tipo = 'Recibido' and a.acta_entrega_id is null
+    and exists (select 1 from actas e where e.id::text = a.checklist->>'acta_entrega_id' and e.tipo = 'Entrega' and e.placa = a.placa);
+
   for r in select id, placa, created_at from actas
            where tipo = 'Recibido' and acta_entrega_id is null order by created_at, id loop
     update actas set acta_entrega_id = (
@@ -114,3 +119,7 @@ $$;
 
 revoke all on function get_acta_publica(uuid) from public;
 grant execute on function get_acta_publica(uuid) to anon, authenticated;
+
+-- Que la API de Supabase vea ya las columnas nuevas (si no, sale "Could not find the ... column in the
+-- schema cache" hasta que se refresque sola).
+notify pgrst, 'reload schema';
