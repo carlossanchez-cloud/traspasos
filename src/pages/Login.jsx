@@ -6,8 +6,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
       <div className="max-w-sm w-full bg-white border border-slate-200 rounded-2xl shadow-sm p-8 text-center">
         <img src="/rentandes-icon.png" alt="rentandes" className="h-14 w-auto mx-auto mb-4" />
-        <h1 className="text-lg font-bold text-slate-800">Flota Sustitutos</h1>
-        <p className="text-sm text-slate-500 mt-1 mb-6">Gestión de vehículos sustitutos de Rentandes.</p>
+        <h1 className="text-lg font-bold text-slate-800">Flota Rentandes</h1>
+        <p className="text-sm text-slate-500 mt-1 mb-6">Centro de gestión de activos Rentandes.</p>
         <button
           onClick={signInWithGoogle}
           className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-2 transition-colors"

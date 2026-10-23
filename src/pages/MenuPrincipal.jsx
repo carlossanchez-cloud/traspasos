@@ -27,6 +27,7 @@ export default function MenuPrincipal() {
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+        <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Flota Rentandes · Centro de gestión de activos</p>
         <h1 className="text-2xl font-black text-slate-800">Menú principal</h1>
         <p className="text-sm text-slate-500 mb-6">¿A qué módulo quieres entrar?</p>
         <div className="grid sm:grid-cols-3 gap-4">
