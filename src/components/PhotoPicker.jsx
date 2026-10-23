@@ -133,8 +133,8 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
         <div className="relative flex-1 flex items-center justify-center overflow-hidden">
           <video ref={videoRef} autoPlay playsInline muted className="max-w-full max-h-full" />
           {guia?.silueta && (
-            <div className="absolute inset-0 flex items-center justify-center p-6 pointer-events-none">
-              <div className="w-full max-w-xl aspect-[400/230]"><Silueta tipo={guia.silueta} /></div>
+            <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+              <Silueta tipo={guia.silueta} />
             </div>
           )}
           {!stream && <p className="absolute text-white text-sm px-6 text-center">Abriendo cámara… acepta el permiso si el navegador lo pide.</p>}

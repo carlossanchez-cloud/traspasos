@@ -71,7 +71,7 @@ export const FOTOS_RECORRIDO = [
   { key: 'diagonal-trasera-izquierda', silueta: 'trasera-izquierda', label: 'Diagonal trasera izquierda', ayuda: 'Camina por el lado izquierdo hasta la esquina trasera y encuadra la parte trasera y el costado izquierdo.' },
   { key: 'diagonal-trasera-derecha', silueta: 'trasera-derecha', label: 'Diagonal trasera derecha', ayuda: 'Pasa por detrás hasta la esquina trasera derecha y encuadra la parte trasera y el costado derecho.' },
   { key: 'diagonal-delantera-derecha', silueta: 'delantera-derecha', label: 'Diagonal delantera derecha', ayuda: 'Camina por el lado derecho hasta la esquina delantera y encuadra el frente y el costado derecho.' },
-  { key: 'habitaculo', silueta: 'habitaculo', label: 'Habitáculo interior', ayuda: 'Abre la puerta y toma el interior: sillas, tapizados y piso.' },
+  { key: 'habitaculo', silueta: 'habitaculo', label: 'Habitáculo interior', ayuda: 'Desde el asiento trasero, toma el interior completo: sillas delanteras, timón, tablero y consola.' },
   { key: 'tablero', silueta: 'tablero', label: 'Tablero con motor encendido', ayuda: 'Enciende el motor y toma el tablero de instrumentos: kilometraje, combustible y testigos visibles.' },
 ]
 export const siguienteRecorrido = (fotos) => FOTOS_RECORRIDO.find((f) => !fotos[f.key])
