@@ -79,6 +79,10 @@ export default function PhotoPicker({ fotos, onChange, onError, single, guia }) 
 export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRepetir }) {
   const videoRef = useRef(null)
   const [stream, setStream] = useState(null)
+  // Flash: la web no tiene flash de disparo, pero en los celulares que lo permiten (Chrome en Android) se
+  // puede prender la luz de la camara como linterna mientras se toman las fotos.
+  const [flashDisponible, setFlashDisponible] = useState(false)
+  const [flashOn, setFlashOn] = useState(false)
   const [sesion, setSesion] = useState([]) // object URLs de lo tomado en esta apertura (modo libre)
   const [flash, setFlash] = useState(false)
   const [viendo, setViendo] = useState(null)
@@ -98,6 +102,7 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
         s = st
         setStream(st)
         videoRef.current.srcObject = st
+        setFlashDisponible(Boolean(st.getVideoTracks()[0]?.getCapabilities?.().torch))
       })
       .catch((err) => onFailRef.current(err.name === 'NotAllowedError'
         ? 'No diste permiso para usar la cámara. Puedes activarlo en la configuración del navegador.'
@@ -105,6 +110,15 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
     return () => { cancelled = true; s?.getTracks().forEach((t) => t.stop()) }
   }, [])
   useEffect(() => () => sesion.forEach((u) => URL.revokeObjectURL(u)), [sesion])
+
+  const toggleFlash = async () => {
+    try {
+      await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: !flashOn }] })
+      setFlashOn(!flashOn)
+    } catch {
+      setFlashDisponible(false)
+    }
+  }
 
   const capturar = () => {
     const v = videoRef.current
@@ -162,7 +176,15 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
         )}
       </div>
       <div className="flex items-center justify-between gap-3 p-4 bg-black">
-        <span className="text-white text-sm w-24">{tomadas} tomada(s)</span>
+        <div className="w-24 flex flex-col items-start gap-1">
+          {flashDisponible && (
+            <button type="button" onClick={toggleFlash} aria-pressed={flashOn}
+              className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg border ${flashOn ? 'bg-yellow-400 text-slate-900 border-yellow-400' : 'text-white border-white/40'}`}>
+              <Icon name="Zap" className="w-3.5 h-3.5" /> Flash {flashOn ? 'on' : 'off'}
+            </button>
+          )}
+          <span className="text-white text-xs">{tomadas} tomada(s)</span>
+        </div>
         <button type="button" onClick={capturar} disabled={!stream} aria-label="Tomar foto"
           className="w-16 h-16 rounded-full bg-white border-4 border-slate-400 disabled:opacity-40" />
         <button type="button" onClick={onClose} className="w-24 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-lg">

@@ -4,5 +4,7 @@ export const publicActaUrl = (actaId, origin = window.location.origin) => `${ori
 
 export const waShareUrl = (url, text) => `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`
 
-export const mailtoShareUrl = (url, subject, text) =>
-  `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`${text}\n\n${url}`)}`
+// Redaccion de Gmail directa (en vez de mailto:, que abre el programa de correo predeterminado del equipo,
+// p.ej. Outlook). En el celular abre Gmail en el navegador o en la app si esta instalada.
+export const gmailShareUrl = (url, subject, text) =>
+  `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(`${text}\n\n${url}`)}`

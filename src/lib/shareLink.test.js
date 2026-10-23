@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { publicActaUrl, waShareUrl, mailtoShareUrl } from './shareLink.js'
+import { publicActaUrl, waShareUrl, gmailShareUrl } from './shareLink.js'
 
 test('publicActaUrl: arma la ruta publica con el id del acta como token', () => {
   assert.equal(publicActaUrl('abc-123', 'https://sustitutos.vercel.app'), 'https://sustitutos.vercel.app/acta-publica/abc-123')
@@ -12,8 +12,8 @@ test('waShareUrl: link de wa.me con el texto y la url codificados', () => {
   assert.match(decodeURIComponent(url.split('=')[1]), /Hola https:\/\/x\.test\/a/)
 })
 
-test('mailtoShareUrl: incluye subject y body con la url', () => {
-  const url = mailtoShareUrl('https://x.test/a', 'Asunto', 'Cuerpo')
-  assert.match(url, /^mailto:\?subject=Asunto&body=/)
+test('gmailShareUrl: abre la redaccion de Gmail con asunto y cuerpo con la url', () => {
+  const url = gmailShareUrl('https://x.test/a', 'Asunto', 'Cuerpo')
+  assert.match(url, /^https:\/\/mail\.google\.com\/mail\/\?view=cm&fs=1&su=Asunto&body=/)
   assert.match(decodeURIComponent(url), /Cuerpo[\s\S]*https:\/\/x\.test\/a/)
 })

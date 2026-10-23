@@ -6,7 +6,7 @@ import { formatDate, formatKM, todayISO } from '../lib/format'
 import { pdfOrientation, waitForImages } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto, FOTOS_RECORRIDO } from '../lib/actaChecklist'
-import { publicActaUrl, waShareUrl, mailtoShareUrl } from '../lib/shareLink'
+import { publicActaUrl, waShareUrl, gmailShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 import Row from '../components/Row'
@@ -378,7 +378,7 @@ function EnviarFirma({ acta, notify }) {
       </p>
       <div className="flex flex-wrap gap-2">
         <a href={waShareUrl(url, texto)} target="_blank" rel="noreferrer" className={btn}>WhatsApp</a>
-        <a href={mailtoShareUrl(url, `Acta ${acta.placa}`, texto)} className={btn}>Email</a>
+        <a href={gmailShareUrl(url, `Acta ${acta.placa}`, texto)} target="_blank" rel="noreferrer" className={btn}>Gmail</a>
         <button className={btn} onClick={async () => {
           try {
             await navigator.clipboard.writeText(url)
