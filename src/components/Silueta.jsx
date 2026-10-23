@@ -1,44 +1,12 @@
-// Siluetas de referencia que se dibujan encima de la camara en el recorrido guiado, para mostrar mas o
-// menos como debe quedar encuadrada cada foto. Son trazos blancos semitransparentes, no salen en la foto
-// (la captura lee solo el video). Una sola vista 3/4 del carro con la cara visible a la izquierda: se
-// decora con farolas (frente) o stops (trasera) y se espeja para el lado contrario.
-const STROKE = { fill: 'none', stroke: 'white', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round' }
+import sedanFrente from '../assets/siluetas/sedan-frente.png'
+import sedanTrasera from '../assets/siluetas/sedan-trasera.png'
 
-function Carro34({ trasera }) {
-  return (
-    <g {...STROKE}>
-      {/* cara visible (frente o trasera) */}
-      <path d="M40 112 L132 124 L132 182 L40 168 Z" />
-      {/* capo / baul y techo */}
-      <path d="M40 112 L92 96 L176 104 L132 124" />
-      <path d="M176 104 L208 64 L312 60 L346 100" />
-      <path d="M132 124 L160 84 L208 64" />
-      <path d="M160 84 L176 104" />
-      {/* costado */}
-      <path d="M132 124 L176 104 L346 100 L372 104 L372 152 L132 182" />
-      <path d="M166 120 L190 88 L250 84 L250 118 Z" strokeWidth="2" />
-      <path d="M260 117 L260 83 L306 80 L332 112 Z" strokeWidth="2" />
-      <path d="M255 120 L255 170" strokeWidth="2" />
-      {/* ruedas */}
-      <ellipse cx="190" cy="176" rx="24" ry="26" />
-      <ellipse cx="322" cy="160" rx="22" ry="24" />
-      {/* detalles de la cara visible */}
-      {trasera ? (
-        <>
-          <path d="M48 124 L74 128 L74 144 L48 140 Z" strokeWidth="2" />
-          <path d="M98 132 L124 136 L124 152 L98 148 Z" strokeWidth="2" />
-          <path d="M64 152 L108 158" strokeWidth="2" />
-        </>
-      ) : (
-        <>
-          <ellipse cx="60" cy="130" rx="12" ry="8" strokeWidth="2" />
-          <ellipse cx="114" cy="139" rx="12" ry="8" strokeWidth="2" />
-          <path d="M72 146 L102 150 L102 164 L72 160 Z" strokeWidth="2" />
-        </>
-      )}
-    </g>
-  )
-}
+// Siluetas de referencia que se dibujan encima de la camara en el recorrido guiado, para mostrar mas o
+// menos como debe quedar encuadrada cada foto. No salen en la foto (la captura lee solo el video).
+// Las diagonales usan el trazo de un sedan real en vista 3/4 (sacado del render src/assets/vehicles/automovil.png):
+// tal cual para las delanteras y, para las traseras, el mismo costado con la cara trasera dibujada encima
+// (stops, baul, placa); se espeja segun el lado. Habitaculo y tablero siguen siendo un esquema dibujado.
+const STROKE = { fill: 'none', stroke: 'white', strokeWidth: 3, strokeLinejoin: 'round', strokeLinecap: 'round' }
 
 function Habitaculo() {
   return (
@@ -70,14 +38,19 @@ function Tablero() {
 }
 
 export default function Silueta({ tipo }) {
-  const espejo = tipo === 'delantera-derecha' || tipo === 'trasera-izquierda'
+  const estilo = { opacity: 0.8, filter: 'drop-shadow(0 0 2px rgba(0,0,0,.9))' }
+  if (tipo !== 'habitaculo' && tipo !== 'tablero') {
+    // El render tiene la cara visible (frente) a la izquierda: tal cual es la diagonal delantera izquierda.
+    // Para la trasera derecha la cara visible (trasera) tambien queda a la izquierda; las otras dos, espejo.
+    const espejo = tipo === 'delantera-derecha' || tipo === 'trasera-izquierda'
+    return (
+      <img src={tipo.startsWith('delantera') ? sedanFrente : sedanTrasera} alt="" aria-hidden="true"
+        className="w-full h-full object-contain" style={{ ...estilo, transform: espejo ? 'scaleX(-1)' : undefined }} />
+    )
+  }
   return (
-    <svg viewBox="0 0 400 230" className="w-full h-full" style={{ opacity: 0.75, filter: 'drop-shadow(0 0 2px rgba(0,0,0,.8))' }}
-      preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-      <g transform={espejo ? 'translate(400 0) scale(-1 1)' : undefined}>
-        {tipo === 'habitaculo' ? <Habitaculo /> : tipo === 'tablero' ? <Tablero />
-          : <Carro34 trasera={tipo.startsWith('trasera')} />}
-      </g>
+    <svg viewBox="0 0 400 230" className="w-full h-full" style={estilo} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      {tipo === 'habitaculo' ? <Habitaculo /> : <Tablero />}
     </svg>
   )
 }
