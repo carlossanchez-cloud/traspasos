@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate, formatKM } from '../lib/format'
 import { useToast } from '../lib/useToast'
+import { TERMINOS, TERMINOS_TITULO } from '../lib/terminos'
 import Row from '../components/Row'
 import ChecklistView from '../components/ChecklistView'
 import PhotoPicker from '../components/PhotoPicker'
@@ -28,6 +29,8 @@ export default function ActaPublica() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
+  const [acepta, setAcepta] = useState(false)
+  const [verTerminos, setVerTerminos] = useState(false)
 
   useEffect(() => {
     supabase.rpc('get_acta_publica', { p_token: token }).then(({ data, error }) => {
@@ -53,6 +56,7 @@ export default function ActaPublica() {
   const pedirConfirmacion = () => {
     if (!nombreCliente.trim()) { notify('Escribe tu nombre.', 'error'); return }
     if (!firma) { notify('Falta la firma.', 'error'); return }
+    if (TERMINOS.length && !acepta) { notify(`Debes aceptar los ${TERMINOS_TITULO.toLowerCase()} para firmar.`, 'error'); return }
     setConfirmando(true)
   }
 
@@ -164,8 +168,32 @@ export default function ActaPublica() {
                 <p className="text-xs font-bold text-slate-500 uppercase mb-1">Tu firma</p>
                 <SignaturePad onChange={setFirma} />
               </div>
+              {/* Aceptacion obligatoria: la casilla habilita "Firmar y enviar"; tocar el texto despliega las
+                  condiciones del contrato de sustitutos (src/lib/terminos.js). */}
+              {TERMINOS.length > 0 && (
+              <div className="mt-4 rounded-lg border border-slate-200">
+                <div className="flex items-start gap-2.5 p-3">
+                  <button type="button" role="checkbox" aria-checked={acepta} onClick={() => setAcepta((a) => !a)}
+                    className={`mt-0.5 w-5 h-5 shrink-0 rounded border-2 flex items-center justify-center text-white text-xs font-black ${acepta ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-slate-300'}`}>
+                    {acepta ? '✓' : ''}
+                  </button>
+                  <p className="text-sm text-slate-700">
+                    Acepto los{' '}
+                    <button type="button" onClick={() => setVerTerminos((v) => !v)} className="font-bold text-emerald-700 underline">
+                      {TERMINOS_TITULO.toLowerCase()}
+                    </button>
+                  </p>
+                </div>
+                {verTerminos && (
+                  <div className="border-t border-slate-200 bg-slate-50 px-3 py-3 max-h-72 overflow-y-auto text-xs text-slate-700 leading-relaxed flex flex-col gap-2">
+                    <p className="font-bold text-slate-800 text-sm">{TERMINOS_TITULO}</p>
+                    {TERMINOS.map((t, i) => <p key={i} className="whitespace-pre-line">{t}</p>)}
+                  </div>
+                )}
+              </div>
+              )}
               <div className="flex justify-end mt-5">
-                <button onClick={pedirConfirmacion} disabled={submitting} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+                <button onClick={pedirConfirmacion} disabled={submitting || (TERMINOS.length > 0 && !acepta)} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
                   {submitting && <ButtonSpinner />}
                   {submitting ? 'Enviando...' : 'Firmar y enviar'}
                 </button>
