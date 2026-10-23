@@ -124,6 +124,12 @@ No configurado todavía. Más simple: Vercel o Netlify conectado al repo de GitH
   **Y también el paso `20_fix_storage_select_anon.sql`**: sin él, al firmar sale "permission denied for table
   profiles" (la policy de lectura del bucket del paso 07 aplicaba también al cliente sin sesión).
 
+- **Consecutivo y ciclo entrega → recibido** (2026-10) — cada acta tiene un N.º único que asigna la base de
+  datos, y cada acta de Recibido queda amarrada a la Entrega que cierra. La lista de Actas se agrupa por ciclo
+  ("Pendientes por recibir" / "Entrega y recibido listos"). **Requiere el paso SQL
+  `21_consecutivo_y_ciclo_actas.sql`** (después del 19 y el 20): numera las actas existentes, las empareja y
+  agrega un trigger que no deja entregar dos veces la misma placa sin recibirla.
+
 ## Qué falta (a propósito, no es descuido)
 
 - **Módulo financiero** (costos por vehículo/parqueadero/traslado) — la propia reunión lo marcó como fase futura,
