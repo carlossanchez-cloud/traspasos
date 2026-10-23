@@ -1,4 +1,4 @@
--- PASO 20 — fix real: el cliente no podia firmar desde el enlace. Error probado en vivo (2026-10-23,
+-- PASO 20 (correr despues del 19) — fix real: el cliente no podia firmar desde el enlace. Error probado en vivo (2026-10-23,
 -- celular sin sesion, despues de correr el paso 19): "permission denied for table profiles".
 --
 -- Causa raiz: la policy de LECTURA del bucket 'actas' (paso 07) se creo sin "to authenticated", asi que
@@ -43,3 +43,9 @@ create policy "actas storage: cliente lee su evidencia mientras firma" on storag
     and (storage.foldername(name))[1] = 'publicas'
     and public.acta_publica_abierta((storage.foldername(name))[2])
   );
+
+-- El enlace del cliente tambien se puede abrir en un celular donde hay una sesion de Rentandes iniciada
+-- (rol 'authenticated', no 'anon'). El paso 19 dejo get/submit solo para anon: se habilitan tambien para
+-- authenticated, que ya puede subir al bucket por la policy del paso 07.
+grant execute on function get_acta_publica(uuid) to authenticated;
+grant execute on function submit_acta_publica(uuid, text, text, text[], text) to authenticated;

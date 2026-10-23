@@ -17,99 +17,96 @@ const fotosDeNovedades = (checklist) => CHECK_ITEMS.flatMap((item) => Object.ent
   .filter(([, p]) => p.foto)
   .map(([parte, p]) => ({ parte, item, estado: p.estado, obs: p.obs, path: p.foto })))
 
+// Quien firmo que. Desde el paso 19 la firma del gestor va en firma_url y la del cliente en
+// firma_cliente_url. Antes, al firmar el cliente su firma reemplazaba a la del gestor en firma_url: en
+// esas actas (firmadas, sin firma_cliente_url) la unica firma que queda es la del cliente.
+const rotuloFirmas = (acta) => {
+  if (acta.firma_cliente_url) return { firma: 'Firma del gestor de flota', reemplazada: false }
+  if (acta.bloqueada) return { firma: 'Firma del cliente', reemplazada: true }
+  return { firma: acta.checklist?.firma_gestor_publica ? 'Firma del gestor de flota' : 'Firma', reemplazada: false }
+}
+
+const firmar = async (path) => (path ? (await signAll([path]))[0] || null : null)
+
+// Todo lo grafico del acta, en el orden del documento: recorrido, novedades, fotos adicionales del
+// gestor, fotos del cliente y las dos firmas. Es lo que sale tambien en el PDF.
 export default function ActaPhotos({ acta }) {
-  const [fotoUrls, setFotoUrls] = useState([])
-  const [novedades, setNovedades] = useState([])
-  const [recorrido, setRecorrido] = useState([])
-  const [firmaUrl, setFirmaUrl] = useState(null)
-  const [firmaClienteUrl, setFirmaClienteUrl] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [g, setG] = useState(null)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    setG(null)
     // Las del recorrido tambien estan en fotos_urls; se muestran rotuladas aparte y no se repiten abajo.
     const rec = FOTOS_RECORRIDO.filter((f) => acta.checklist?.fotos_recorrido?.[f.key])
       .map((f) => ({ label: f.label, path: acta.checklist.fotos_recorrido[f.key] }))
     const recPaths = new Set(rec.map((r) => r.path))
+    const conUrl = (list) => Promise.all(list.map(async (x) => ({ ...x, url: await firmar(x.path) })))
+      .then((l) => l.filter((x) => x.url))
     Promise.all([
-      signAll([...(acta.fotos_urls || []).filter((p) => !recPaths.has(p)), ...(acta.fotos_urls_cliente || [])]),
-      acta.firma_url ? signAll([acta.firma_url]) : Promise.resolve([]),
-      acta.firma_cliente_url ? signAll([acta.firma_cliente_url]) : Promise.resolve([]),
-      Promise.all(fotosDeNovedades(acta.checklist).map(async (n) => ({ ...n, url: (await signAll([n.path]))[0] }))),
-      Promise.all(rec.map(async (r) => ({ ...r, url: (await signAll([r.path]))[0] }))),
-    ]).then(([fotos, firma, firmaCliente, nov, recUrls]) => {
-      if (cancelled) return
-      setRecorrido(recUrls.filter((r) => r.url))
-      setFotoUrls(fotos)
-      setNovedades(nov.filter((n) => n.url))
-      setFirmaUrl(firma[0] || null)
-      setFirmaClienteUrl(firmaCliente[0] || null)
-      setLoading(false)
+      conUrl(rec),
+      conUrl(fotosDeNovedades(acta.checklist).map((n) => ({ ...n, label: `${n.parte} — ${n.estado}${n.obs ? `: ${n.obs}` : ''}` }))),
+      conUrl((acta.fotos_urls || []).filter((p) => !recPaths.has(p)).map((path, i) => ({ path, label: `Foto adicional ${i + 1}` }))),
+      conUrl((acta.fotos_urls_cliente || []).map((path, i) => ({ path, label: `Foto del cliente ${i + 1}` }))),
+      firmar(acta.firma_url),
+      firmar(acta.firma_cliente_url),
+    ]).then(([recorrido, novedades, adicionales, cliente, firma, firmaCliente]) => {
+      if (!cancelled) setG({ recorrido, novedades, adicionales, cliente, firma, firmaCliente })
     })
     return () => { cancelled = true }
   }, [acta.id])
 
-  if (loading) return <Spinner label="Cargando fotos..." className="py-6" />
+  if (!g) return <Spinner label="Cargando fotos..." className="py-6" />
 
+  const rotulo = rotuloFirmas(acta)
+  const vacio = !g.recorrido.length && !g.novedades.length && !g.adicionales.length && !g.cliente.length && !g.firma && !g.firmaCliente
   return (
     <div className="flex flex-col gap-4">
-      {recorrido.length > 0 && (
-        <div>
-          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Recorrido del vehículo ({recorrido.length})</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {recorrido.map((r) => (
-              <a key={r.path} href={r.url} target="_blank" rel="noreferrer" className="block">
-                <img src={r.url} alt={r.label} className="w-full h-24 object-cover rounded-lg border border-slate-200" />
-                <p className="text-[11px] text-slate-600 mt-1 leading-tight font-semibold">{r.label}</p>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-      {novedades.length > 0 && (
-        <div>
-          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Fotos de novedades ({novedades.length})</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {novedades.map((n) => (
-              <a key={n.path} href={n.url} target="_blank" rel="noreferrer" className="block">
-                <img src={n.url} alt={n.parte} className="w-full h-24 object-cover rounded-lg border border-slate-200" />
-                <p className="text-[11px] text-slate-600 mt-1 leading-tight"><strong>{n.parte}</strong> — {n.estado}{n.obs ? `: ${n.obs}` : ''}</p>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-      {fotoUrls.length > 0 && (
-        <div>
-          <p className="text-xs font-bold text-slate-500 uppercase mb-2">{recorrido.length ? 'Fotos adicionales' : 'Fotos'} ({fotoUrls.length})</p>
-          <div className="grid grid-cols-3 gap-2">
-            {fotoUrls.map((url, i) => (
-              <a key={i} href={url} target="_blank" rel="noreferrer">
-                <img src={url} alt={`Foto ${i + 1}`} className="w-full h-24 object-cover rounded-lg border border-slate-200" />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-      {(firmaUrl || firmaClienteUrl) && (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {firmaUrl && (
-            <div>
-              {/* Actas nuevas: firma_url es la del gestor (paso 19). En las de antes podia ser la del cliente. */}
-              <p className="text-xs font-bold text-slate-500 uppercase mb-2">{acta.checklist?.firma_gestor_publica ? 'Firma del gestor de flota' : 'Firma'}</p>
-              <img src={firmaUrl} alt="Firma del gestor" className="max-h-32 border border-slate-200 rounded-lg bg-white" />
-            </div>
+      <Galeria titulo="Recorrido del vehículo" fotos={g.recorrido} />
+      <Galeria titulo="Fotos de novedades" fotos={g.novedades} />
+      <Galeria titulo="Fotos adicionales del gestor" fotos={g.adicionales} />
+      <Galeria titulo="Fotos del cliente" fotos={g.cliente} />
+      {(g.firma || g.firmaCliente) && (
+        <div className="grid grid-cols-2 gap-3">
+          {g.firma && (
+            <Firma titulo={rotulo.firma} url={g.firma}
+              nombre={rotulo.reemplazada ? acta.nombre_cliente : null} />
           )}
-          {firmaClienteUrl && (
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase mb-2">Firma del cliente</p>
-              <img src={firmaClienteUrl} alt="Firma del cliente" className="max-h-32 border border-slate-200 rounded-lg bg-white" />
-            </div>
-          )}
+          {g.firmaCliente && <Firma titulo="Firma del cliente" url={g.firmaCliente} nombre={acta.nombre_cliente} />}
         </div>
       )}
-      {fotoUrls.length === 0 && novedades.length === 0 && recorrido.length === 0 && !firmaUrl && !firmaClienteUrl && <p className="text-sm text-slate-400">Sin fotos ni firma en esta acta.</p>}
+      {rotulo.reemplazada && (
+        <p className="text-[11px] text-amber-700">
+          Esta acta se firmó antes del ajuste de firmas: la firma del cliente quedó guardada en lugar de la del gestor.
+        </p>
+      )}
+      {vacio && <p className="text-sm text-slate-400">Sin fotos ni firma en esta acta.</p>}
+    </div>
+  )
+}
+
+function Galeria({ titulo, fotos }) {
+  if (!fotos.length) return null
+  return (
+    <div>
+      <p className="text-xs font-bold text-slate-500 uppercase mb-2">{titulo} ({fotos.length})</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {fotos.map((f) => (
+          <a key={f.path} href={f.url} target="_blank" rel="noreferrer" className="block">
+            <img src={f.url} alt={f.label} className="w-full h-24 object-cover rounded-lg border border-slate-200" />
+            <p className="text-[11px] text-slate-600 mt-1 leading-tight">{f.label}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Firma({ titulo, url, nombre }) {
+  return (
+    <div>
+      <p className="text-xs font-bold text-slate-500 uppercase mb-2">{titulo}</p>
+      <img src={url} alt={titulo} className="w-full max-h-32 object-contain border border-slate-200 rounded-lg bg-white" />
+      {nombre && <p className="text-xs text-slate-600 mt-1">{nombre}</p>}
     </div>
   )
 }
