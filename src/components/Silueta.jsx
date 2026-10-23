@@ -6,7 +6,8 @@ import tablero from '../assets/siluetas/tablero.png'
 // Siluetas de referencia que se dibujan encima de la camara en el recorrido guiado, para mostrar mas o
 // menos como debe quedar encuadrada cada foto. No salen en la foto (la captura lee solo el video).
 // Son calcos en trazo blanco de fotos de catalogo de un mismo carro: una diagonal delantera (frente a la
-// izquierda), una diagonal trasera (trasera a la izquierda) y el interior visto desde el asiento trasero.
+// izquierda), una diagonal trasera (trasera a la izquierda), el interior visto desde el asiento trasero y
+// el tablero de instrumentos.
 // Las diagonales del otro lado son las mismas espejadas.
 const IMAGEN = {
   'delantera-izquierda': [diagonalDelantera, false],
