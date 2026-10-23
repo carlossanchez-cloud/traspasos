@@ -83,6 +83,8 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
   // puede prender la luz de la camara como linterna mientras se toman las fotos.
   const [flashDisponible, setFlashDisponible] = useState(false)
   const [flashOn, setFlashOn] = useState(false)
+  const [enfoqueDisponible, setEnfoqueDisponible] = useState(false)
+  const [enfoque, setEnfoque] = useState(null) // { x, y } en px dentro del contenedor, para el anillo
   const [sesion, setSesion] = useState([]) // object URLs de lo tomado en esta apertura (modo libre)
   const [flash, setFlash] = useState(false)
   const [viendo, setViendo] = useState(null)
@@ -102,7 +104,9 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
         s = st
         setStream(st)
         videoRef.current.srcObject = st
-        setFlashDisponible(Boolean(st.getVideoTracks()[0]?.getCapabilities?.().torch))
+        const caps = st.getVideoTracks()[0]?.getCapabilities?.() || {}
+        setFlashDisponible(Boolean(caps.torch))
+        setEnfoqueDisponible(Boolean(caps.focusMode?.includes('single-shot') || caps.focusMode?.includes('manual')))
       })
       .catch((err) => onFailRef.current(err.name === 'NotAllowedError'
         ? 'No diste permiso para usar la cámara. Puedes activarlo en la configuración del navegador.'
@@ -110,6 +114,36 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
     return () => { cancelled = true; s?.getTracks().forEach((t) => t.stop()) }
   }, [])
   useEffect(() => () => sesion.forEach((u) => URL.revokeObjectURL(u)), [sesion])
+
+  // Tocar para enfocar: se le pasa a la camara el punto tocado (0..1 sobre la imagen real, descontando las
+  // franjas negras de object-contain) y se pide un enfoque puntual. Solo en navegadores que lo soportan
+  // (Chrome en Android); en el resto la camara sigue con su autoenfoque y el toque no hace nada.
+  const enfocar = async (e) => {
+    if (!enfoqueDisponible || !stream) return
+    const v = videoRef.current
+    const r = v.getBoundingClientRect()
+    const escala = Math.min(r.width / v.videoWidth, r.height / v.videoHeight)
+    const w = v.videoWidth * escala
+    const h = v.videoHeight * escala
+    const x = (e.clientX - r.left - (r.width - w) / 2) / w
+    const y = (e.clientY - r.top - (r.height - h) / 2) / h
+    if (x < 0 || x > 1 || y < 0 || y > 1) return
+    setEnfoque({ x: e.clientX - r.left, y: e.clientY - r.top, t: Date.now() })
+    const track = stream.getVideoTracks()[0]
+    const modos = track.getCapabilities().focusMode || []
+    try {
+      await track.applyConstraints({ advanced: [{ pointsOfInterest: [{ x, y }], focusMode: modos.includes('single-shot') ? 'single-shot' : 'manual' }] })
+      // Despues de unos segundos vuelve al autoenfoque continuo, para la siguiente foto.
+      if (modos.includes('continuous')) setTimeout(() => track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {}), 4000)
+    } catch {
+      setEnfoqueDisponible(false)
+    }
+  }
+  useEffect(() => {
+    if (!enfoque) return
+    const id = setTimeout(() => setEnfoque(null), 900)
+    return () => clearTimeout(id)
+  }, [enfoque])
 
   const toggleFlash = async () => {
     try {
@@ -152,12 +186,16 @@ export function CameraModal({ onCapture, onClose, onFail, guia, miniaturas, onRe
         </div>
       )}
       <div className="flex-1 flex min-h-0">
-        <div className="relative flex-1 flex items-center justify-center overflow-hidden">
+        <div className="relative flex-1 flex items-center justify-center overflow-hidden" onClick={enfocar}>
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+          {enfoque && (
+            <div key={enfoque.t} className="absolute w-16 h-16 -ml-8 -mt-8 rounded-full border-2 border-yellow-300 pointer-events-none animate-ping"
+              style={{ left: enfoque.x, top: enfoque.y, animationIterationCount: 1 }} />
+          )}
           {guia?.silueta && (
-            // Guia chica en la esquina superior izquierda, para no tapar lo que se esta fotografiando.
-            <div className="absolute top-2 left-2 w-32 sm:w-44 rounded-lg bg-black/60 border border-white/30 p-1.5 pointer-events-none apaisado:top-auto apaisado:bottom-2 apaisado:w-28 apaisado:p-1">
-              <p className="text-[10px] font-bold text-white/80 uppercase mb-1 apaisado:hidden">Guía</p>
+            // Guia chica en la esquina superior izquierda (abajo en horizontal), solo la silueta sin recuadro,
+            // para no tapar lo que se esta fotografiando.
+            <div className="absolute top-2 left-2 w-32 sm:w-44 pointer-events-none apaisado:top-auto apaisado:bottom-2 apaisado:w-28">
               <div className="h-16 sm:h-24 flex items-center justify-center apaisado:h-12"><Silueta tipo={guia.silueta} /></div>
             </div>
           )}
