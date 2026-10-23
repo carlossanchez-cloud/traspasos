@@ -14,6 +14,9 @@ import ActaPublica from './pages/ActaPublica'
 import NotFound from './pages/NotFound'
 import MenuPrincipal from './pages/MenuPrincipal'
 import ModuloProximo from './pages/ModuloProximo'
+import InventarioInicio from './pages/inventario/Inicio'
+import InventarioTecnico from './pages/inventario/Tecnico'
+import InventarioComercial from './pages/inventario/Comercial'
 import Spinner from './components/Spinner'
 
 const NAV = [
@@ -104,7 +107,9 @@ export default function App() {
               {/* Despues del login se llega al menu principal ("/"); desde ahi se entra a cada modulo. */}
               <Routes>
                 <Route path="/" element={<MenuPrincipal />} />
-                <Route path="/inventario" element={<ModuloProximo titulo="Inventario" />} />
+                <Route path="/inventario" element={<InventarioInicio />} />
+                <Route path="/inventario/tecnico" element={<InventarioTecnico />} />
+                <Route path="/inventario/comercial" element={<InventarioComercial />} />
                 <Route path="/gestion-flota" element={<RequireAdmin><ModuloProximo titulo="Gestión de flota" /></RequireAdmin>} />
                 <Route path="/*" element={
                   <Shell>
