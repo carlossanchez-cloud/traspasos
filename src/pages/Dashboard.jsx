@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
+import { actasDeAsignacion } from '../lib/ciclosActas'
 import { Icon } from '../lib/icons'
 import { formatDate, formatKM, daysDiff, STATUS_STYLE, todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
@@ -35,11 +36,28 @@ function StatCard({ label, value, tone, bar, icon }) {
   )
 }
 
+// Control interno de un vehiculo asignado: si ya tiene acta de entrega y de recibido de esta asignacion.
+function ControlActas({ hechas }) {
+  const item = (ok, label) => (
+    <span className={`flex items-center gap-1 font-bold ${ok ? 'text-emerald-700' : 'text-red-600'}`}>
+      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white ${ok ? 'bg-emerald-600' : 'bg-red-600'}`}>{ok ? '✓' : '✕'}</span>
+      {label}
+    </span>
+  )
+  return (
+    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs" title="Actas de esta asignación">
+      {item(hechas.entrega, 'Acta de entrega')}
+      {item(hechas.recibido, 'Acta de recibido')}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { isAdmin } = useAuth()
   const { toast, notify, clear } = useToast()
 
   const [vehicles, setVehicles] = useState([])
+  const [actas, setActas] = useState([]) // para el control de actas de los asignados
   const [ciudades, setCiudades] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -59,12 +77,14 @@ export default function Dashboard() {
 
   const load = async () => {
     setLoading(true)
-    const [{ data: v, error: ve }, { data: c }] = await Promise.all([
+    const [{ data: v, error: ve }, { data: c }, { data: a }] = await Promise.all([
       supabase.from('vehicles').select('*').order('placa'),
       supabase.from('ciudades').select('nombre').order('nombre'),
+      supabase.from('actas').select('*').order('created_at', { ascending: false }).limit(500),
     ])
     if (ve) notify('Error cargando flota: ' + ve.message, 'error')
     setVehicles(v || [])
+    setActas((a || []).filter((x) => !x.eliminada_en))
     setCiudades((c || []).map((r) => r.nombre))
     setLoading(false)
   }
@@ -231,6 +251,7 @@ export default function Dashboard() {
                         {vencido ? `Vencido ${Math.abs(diasRestantes)} d` : `Faltan ${diasRestantes} d`}
                       </span>
                     </div>
+                    <ControlActas hechas={actasDeAsignacion(v, actas)} />
                   </>
                 )}
                 {v.estado === 'Disponible' && (

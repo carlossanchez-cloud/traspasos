@@ -32,3 +32,16 @@ export const puedeEliminarActa = (acta, activas) => !acta.eliminada_en && !acta.
 // Entrega de esa placa que todavia no tiene su acta de recibido (a lo sumo una, por la regla del ciclo).
 export const entregaAbierta = (actas, placa) =>
   agruparActas(actas).ciclos.find((c) => c.entrega.placa === placa && !c.recibido)?.entrega || null
+
+// Actas de la asignacion actual de un vehiculo, para el control en la tarjeta de Flota: { entrega, recibido }
+// (true si ya se hizo). Si hay una entrega abierta (sin recibido) de la placa, la entrega esta hecha y el
+// recibido no. Si no, cuenta la ultima entrega de la placa hecha desde que empezo la asignacion (fecha de
+// inicio o del cambio de estado, la mas antigua): si existe ya tiene su recibido. Sin eso, ninguna esta hecha.
+// `actas` deben ser las no eliminadas.
+export function actasDeAsignacion(vehiculo, actas) {
+  const abierta = entregaAbierta(actas, vehiculo.placa)
+  if (abierta) return { entrega: true, recibido: false }
+  const desde = [vehiculo.fecha_inicio, vehiculo.fecha_estado].filter(Boolean).sort()[0] || ''
+  const cerrada = agruparActas(actas).ciclos.find((c) => c.entrega.placa === vehiculo.placa && (c.entrega.fecha || '') >= desde)
+  return cerrada ? { entrega: true, recibido: true } : { entrega: false, recibido: false }
+}

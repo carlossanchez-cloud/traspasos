@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { numActa, agruparActas, entregaAbierta, puedeEliminarActa } from './ciclosActas.js'
+import { numActa, agruparActas, entregaAbierta, puedeEliminarActa, actasDeAsignacion } from './ciclosActas.js'
 
 const acta = (id, tipo, placa, created_at, extra = {}) => ({ id, tipo, placa, created_at, ...extra })
 
@@ -52,4 +52,18 @@ test('puedeEliminarActa: solo actas sin firma del cliente, no eliminadas, y entr
   assert.equal(puedeEliminarActa(e2, activas), true)
   assert.equal(puedeEliminarActa({ ...e2, bloqueada: true }, activas), false)
   assert.equal(puedeEliminarActa({ ...e2, eliminada_en: '2026-10-28T10:00:00Z' }, activas), false)
+})
+
+test('actasDeAsignacion: entrega y recibido de la asignacion actual del vehiculo', () => {
+  const v = { placa: 'AAA111', fecha_inicio: '2026-10-20', fecha_estado: '2026-10-20' }
+  const viejaE = acta('e0', 'Entrega', 'AAA111', '2026-09-01', { fecha: '2026-09-01' })
+  const viejaR = acta('r0', 'Recibido', 'AAA111', '2026-09-10', { fecha: '2026-09-10', acta_entrega_id: 'e0' })
+  // Solo actas de una asignacion anterior: nada hecho para esta.
+  assert.deepEqual(actasDeAsignacion(v, [viejaE, viejaR]), { entrega: false, recibido: false })
+  // Entrega hecha, sin recibido.
+  const e1 = acta('e1', 'Entrega', 'AAA111', '2026-10-20', { fecha: '2026-10-20' })
+  assert.deepEqual(actasDeAsignacion(v, [viejaE, viejaR, e1]), { entrega: true, recibido: false })
+  // Entrega y recibido hechos.
+  const r1 = acta('r1', 'Recibido', 'AAA111', '2026-10-30', { fecha: '2026-10-30', acta_entrega_id: 'e1' })
+  assert.deepEqual(actasDeAsignacion(v, [viejaE, viejaR, e1, r1]), { entrega: true, recibido: true })
 })
