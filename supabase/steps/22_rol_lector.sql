@@ -58,6 +58,10 @@ drop policy if exists "actas: crear si hay perfil" on actas;
 create policy "actas: crear si hay perfil" on actas
   for insert to authenticated with check (public.puede_editar() and creada_por = auth.uid());
 
+-- La policy de abajo llama acta_publica_abierta() (paso 20, solo para anon): authenticated tambien necesita
+-- poder ejecutarla, o Postgres rechaza toda subida con "permission denied for function" (ver paso 24).
+grant execute on function public.acta_publica_abierta(text) to authenticated;
+
 -- Subir fotos/firmas: admin o gestor. Un lector con sesion abierta igual puede firmar como cliente el enlace
 -- de un acta (carpeta publicas/{acta}/ de un acta sin firmar), igual que alguien sin sesion.
 drop policy if exists "actas storage: subir si hay perfil" on storage.objects;
