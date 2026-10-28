@@ -18,6 +18,7 @@ export default function Asignaciones() {
   const [resolving, setResolving] = useState(null)
   const [candidatos, setCandidatos] = useState([])
   const [placaElegida, setPlacaElegida] = useState('')
+  const [filtro, setFiltro] = useState('pendientes') // pendientes | completadas
 
   const loadSolicitudes = async () => {
     setLoadingSolicitudes(true)
@@ -30,6 +31,8 @@ export default function Asignaciones() {
   const abrirResolucion = async (s) => {
     setResolving(s)
     setPlacaElegida('')
+    setCandidatos([])
+    if (s.estado !== 'Pendiente') return // completada: solo se consulta
     // Solo 'estado' se filtra exacto en el servidor (es un enum controlado). ciudad/tipo_vehiculo
     // se comparan en el cliente con matchesSolicitud (case/espacios-insensible): datos reales
     // (seed cargado a mano, ciudades agregadas en momentos distintos) traen inconsistencias de
@@ -54,17 +57,30 @@ export default function Asignaciones() {
   }
 
   const pendientes = solicitudes.filter((s) => s.estado === 'Pendiente')
+  // Completadas: las ya asignadas, la ultima asignada primero.
+  const completadas = solicitudes.filter((s) => s.estado === 'Resuelta')
+    .sort((a, b) => (b.resuelta_at || '').localeCompare(a.resuelta_at || ''))
+  const tab = (key, label, n) => (
+    <button onClick={() => setFiltro(key)}
+      className={`text-xs font-bold px-3 py-1.5 rounded-full border ${filtro === key ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`}>
+      {label} ({n})
+    </button>
+  )
 
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-xl font-black text-slate-800 mb-1">Asignaciones</h1>
-      <p className="text-sm text-slate-500 mb-6">Solicitudes de vehículo sustituto que esperan un vehículo disponible.</p>
+      <p className="text-sm text-slate-500 mb-5">Solicitudes de vehículo sustituto: las que esperan vehículo y las ya asignadas.</p>
 
-      <div>
-        <h2 className="text-sm font-black text-slate-500 uppercase mb-3">Solicitudes pendientes de asignar ({pendientes.length})</h2>
-        {loadingSolicitudes ? (
-          <Spinner label="Cargando solicitudes..." className="py-6" />
-        ) : pendientes.length === 0 ? (
+      <div className="flex flex-wrap gap-2 mb-4">
+        {tab('pendientes', 'Pendientes por asignar', pendientes.length)}
+        {tab('completadas', 'Completadas', completadas.length)}
+      </div>
+
+      {loadingSolicitudes ? (
+        <Spinner label="Cargando solicitudes..." className="py-6" />
+      ) : filtro === 'pendientes' ? (
+        pendientes.length === 0 ? (
           <p className="text-sm text-slate-400">No hay solicitudes pendientes.</p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -79,11 +95,28 @@ export default function Asignaciones() {
               </div>
             ))}
           </div>
-        )}
-      </div>
+        )
+      ) : completadas.length === 0 ? (
+        <p className="text-sm text-slate-400">Todavía no hay solicitudes completadas.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {completadas.map((s) => (
+            <div key={s.id} className="bg-white border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="font-bold text-slate-800 text-sm">{s.tipo_vehiculo} en {s.ciudad} — {s.cliente_empresa}</p>
+                <p className="text-xs text-slate-500">Solicitado por {s.admin_flota} · sustituye a {s.placa_contrato} · desde {formatDate(s.fecha_inicio)}</p>
+                <p className="text-xs text-emerald-700 font-bold mt-0.5">
+                  ✓ Asignado <span className="font-mono">{s.vehiculo_asignado_placa || '—'}</span>{s.resuelta_at ? ` el ${formatDate(s.resuelta_at.slice(0, 10))}` : ''}
+                </p>
+              </div>
+              <button onClick={() => abrirResolucion(s)} className="shrink-0 ml-3 text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Ver</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {resolving && (
-        <Modal title={`Solicitud — ${resolving.cliente_empresa}`} onClose={() => setResolving(null)}>
+        <Modal title={`Solicitud${resolving.estado === 'Pendiente' ? '' : ' completada'} — ${resolving.cliente_empresa}`} onClose={() => setResolving(null)}>
           {/* Primero la solicitud completa, tal como se lleno en Solicitar; abajo, el vehiculo a asignar. */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
             <Row label="Cliente" value={resolving.cliente_empresa} />
@@ -103,6 +136,12 @@ export default function Asignaciones() {
             </p>
           </div>
 
+          {resolving.estado !== 'Pendiente' ? (
+            <p className="mt-5 text-sm rounded-lg px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <strong>Completada:</strong> se asignó el vehículo <strong className="font-mono">{resolving.vehiculo_asignado_placa || '—'}</strong>
+              {resolving.resuelta_at ? ` el ${formatDate(resolving.resuelta_at.slice(0, 10))}` : ''}.
+            </p>
+          ) : <>
           <p className="text-xs font-bold text-slate-500 uppercase mt-5 mb-2">Asignar vehículo: {resolving.tipo_vehiculo} disponible en {resolving.ciudad}</p>
           {candidatos.length === 0 ? (
             <p className="text-sm text-slate-400">No hay vehículos disponibles de ese tipo en esa ciudad ahora.</p>
@@ -120,6 +159,7 @@ export default function Asignaciones() {
           <div className="flex justify-end mt-4">
             <button onClick={resolver} disabled={!placaElegida} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50">Confirmar asignación</button>
           </div>
+          </>}
         </Modal>
       )}
 
