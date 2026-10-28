@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { FLEET_PHOTOS } from '../lib/fleetPhotos'
+import { renderDe } from '../lib/fleetPhotos'
 import VehicleTypeIcon from './VehicleTypeIcon'
 
 // Orden de fuentes para la foto de un vehículo:
 // 1. Foto real subida por un admin (bucket privado 'actas', requiere signed URL).
-// 2. Render generado con IA para los 24 vehículos del seed original (fleetPhotos.js).
+// 2. Render del modelo (fleetPhotos.js): por placa o, si no esta, por el modelo registrado.
 // 3. Ícono genérico por tipo (siempre disponible, ninguno de los dos anteriores
 //    necesita existir para que un vehículo nuevo se vea bien de una vez).
 // `soloRender` salta la foto real: en Flota todas las tarjetas se ven parejas con renders (pedido de Alejo);
@@ -27,7 +27,7 @@ export default function VehiclePhoto({ vehicle, className, soloRender = false })
     return <img src={signedUrl} alt={vehicle.placa} className={`object-contain ${className}`} />
   }
 
-  const generated = FLEET_PHOTOS[vehicle.placa?.toUpperCase()]
+  const generated = renderDe(vehicle)
   if (generated) return <img src={generated} alt={vehicle.placa} className={`object-contain ${className}`} />
 
   return <VehicleTypeIcon tipo={vehicle.tipo_vehiculo} className={className} />

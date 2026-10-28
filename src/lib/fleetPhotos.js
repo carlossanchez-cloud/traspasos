@@ -24,3 +24,14 @@ export const FLEET_PHOTOS = {
   LQT877: oroch,
   LQW524: duster,
 }
+
+// Si la placa no esta en la lista, se busca el render por el modelo registrado (p. ej. "JAC T8 2023 MT 4X4"):
+// asi un vehiculo nuevo de un modelo que ya tiene render no cae al generico.
+const POR_MODELO = [
+  [/amarok/i, amarok], [/kangoo/i, kangoo], [/vitara/i, grandVitara], [/jac\s*t\s*8/i, jacT8],
+  [/escape/i, fordEscape], [/captiva/i, captiva], [/colorado/i, colorado], [/oroch/i, oroch], [/duster/i, duster],
+]
+
+export const renderDe = (vehiculo) => FLEET_PHOTOS[vehiculo?.placa?.toUpperCase()]
+  || POR_MODELO.find(([patron]) => patron.test(vehiculo?.modelo || ''))?.[1]
+  || null
