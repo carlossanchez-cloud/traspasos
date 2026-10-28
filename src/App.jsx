@@ -14,7 +14,7 @@ import Ficha from './pages/Ficha'
 import ActaPublica from './pages/ActaPublica'
 import NotFound from './pages/NotFound'
 import MenuPrincipal from './pages/MenuPrincipal'
-import ModuloProximo from './pages/ModuloProximo'
+import GestionFlotaInicio, { SubmoduloEnConstruccion } from './pages/gestionFlota/GestionFlota'
 import InventarioInicio from './pages/inventario/Inicio'
 import InventarioTecnico from './pages/inventario/Tecnico'
 import InventarioComercial from './pages/inventario/Comercial'
@@ -112,7 +112,10 @@ export default function App() {
                 <Route path="/inventario" element={<InventarioInicio />} />
                 <Route path="/inventario/tecnico" element={<InventarioTecnico />} />
                 <Route path="/inventario/comercial" element={<InventarioComercial />} />
-                <Route path="/gestion-flota" element={<RequireAdmin><ModuloProximo titulo="Gestión de flota" /></RequireAdmin>} />
+                <Route path="/gestion-flota" element={<RequireAdmin><GestionFlotaInicio /></RequireAdmin>} />
+                {['/gestion-flota/mantenimiento', '/gestion-flota/kilometraje-adicional', '/gestion-flota/costos-repuestos'].map((ruta) => (
+                  <Route key={ruta} path={ruta} element={<RequireAdmin><SubmoduloEnConstruccion ruta={ruta} /></RequireAdmin>} />
+                ))}
                 <Route path="/*" element={
                   <Shell>
                     <Routes>

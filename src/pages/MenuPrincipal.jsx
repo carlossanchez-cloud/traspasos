@@ -2,13 +2,12 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
 
-// Pantalla de entrada despues del login: se escoge a que modulo entrar. Gestion de flota se va a construir
-// mas adelante (por ahora abre una pagina de "proximamente").
+// Pantalla de entrada despues del login: se escoge a que modulo entrar.
 // Gestion de flota es solo para administradores.
 const MODULOS = [
   { to: '/sustitutos', titulo: 'Sustitutos', icon: 'Car', texto: 'Flota de vehículos sustitutos: mapa, solicitudes, actas (entregado al cliente y recibido por Rentandes) e informes.' },
   { to: '/inventario', titulo: 'Inventario', icon: 'ClipboardList', texto: 'Activos recuperados en venta o recolocación: parte técnica y comercial.' },
-  { to: '/gestion-flota', titulo: 'Gestión de flota', icon: 'Wrench', texto: 'Herramientas para los administradores de flota.', proximamente: true, soloAdmin: true },
+  { to: '/gestion-flota', titulo: 'Gestión de flota', icon: 'Wrench', texto: 'Mantenimiento, cobro por kilometraje adicional y costos de repuestos.', soloAdmin: true },
 ]
 
 export default function MenuPrincipal() {
