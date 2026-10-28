@@ -19,6 +19,16 @@ select column_name from information_schema.columns where table_name = 'actas' an
 
 Los pasos 19 a 24 ya se corrieron en el preview.
 
+**Inventario vacío:** las tablas del paso 23 existen, pero no tienen datos. Falta correr en el preview
+`importar_inventario.sql` (lo tiene Alejo; **no está en el repositorio** porque trae precios y VPN reales; en el
+paquete anterior se llamaba `24_importar_inventario.sql`, que no es el mismo paso 24 del repositorio). Pesa 2 MB:
+si el SQL Editor no lo deja pegar completo, usar `psql`. Para confirmar:
+
+```sql
+select (select count(*) from inv_activos) as activos, (select count(*) from inv_ingresos) as ingresos;
+-- debe dar 1497 y 1557
+```
+
 ## 2. Cuando `sandbox/alejo` pase a `main` (producción)
 
 1. Revisar y unir el pull request de `sandbox/alejo` a `main`.
