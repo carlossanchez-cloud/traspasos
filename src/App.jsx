@@ -78,7 +78,7 @@ function Shell({ children }) {
           </button>
         </div>
       </nav>
-      <main className="flex-1 p-4 md:p-8 overflow-x-hidden">{children}</main>
+      <main className="flex-1 min-w-0 p-4 md:p-8 overflow-x-clip">{children}</main>
     </div>
   )
 }

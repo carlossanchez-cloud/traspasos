@@ -27,13 +27,13 @@ const EMPTY_FORM = {
 
 function StatCard({ label, value, tone, bar, icon }) {
   return (
-    <div className="relative overflow-hidden bg-white border border-slate-200 rounded-2xl p-4 pl-5">
+    <div className="relative overflow-hidden bg-white border border-slate-200 rounded-xl px-4 py-2.5 pl-5">
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${bar}`} />
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{label}</p>
         <Icon name={icon} className={`w-4 h-4 ${tone} opacity-70`} />
       </div>
-      <p className={`text-3xl font-black mt-1.5 ${tone}`}>{value}</p>
+      <p className={`text-2xl font-black leading-tight mt-0.5 ${tone}`}>{value}</p>
     </div>
   )
 }
@@ -181,31 +181,37 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <StatCard label="Total flota" value={stats.total} tone="text-slate-800" bar="bg-slate-300" icon="Car" />
-        <StatCard label="Disponibles" value={stats.disponibles} tone="text-emerald-600" bar="bg-emerald-500" icon="CheckCircle" />
-        <StatCard label="En proceso" value={stats.enProceso} tone="text-amber-600" bar="bg-amber-500" icon="ClipboardList" />
-        <StatCard label="Asignados" value={stats.asignados} tone="text-blue-600" bar="bg-blue-500" icon="User" />
-        <StatCard label="En taller" value={stats.taller} tone="text-red-600" bar="bg-red-500" icon="Wrench" />
+      {/* Contadores y filtros quedan fijos arriba al bajar por la flota (en computador; en celular ocuparian
+          media pantalla). */}
+      <div className="md:sticky md:top-0 z-20 bg-slate-50 -mx-4 md:-mx-8 px-4 md:px-8 pt-2 pb-3 mb-3 md:border-b md:border-slate-200/70">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
+          <StatCard label="Total flota" value={stats.total} tone="text-slate-800" bar="bg-slate-300" icon="Car" />
+          <StatCard label="Disponibles" value={stats.disponibles} tone="text-emerald-600" bar="bg-emerald-500" icon="CheckCircle" />
+          <StatCard label="En proceso" value={stats.enProceso} tone="text-amber-600" bar="bg-amber-500" icon="ClipboardList" />
+          <StatCard label="Asignados" value={stats.asignados} tone="text-blue-600" bar="bg-blue-500" icon="User" />
+          <StatCard label="En taller" value={stats.taller} tone="text-red-600" bar="bg-red-500" icon="Wrench" />
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Icon name="Search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar placa, cliente o admin..."
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+            <option>Todas</option>
+            {ciudades.map((c) => <option key={c}>{c}</option>)}
+          </select>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+            <option>Todos</option>
+            {ESTADOS_VEHICULO.map((e) => <option key={e}>{e}</option>)}
+          </select>
+        </div>
       </div>
 
       <FleetCharts vehicles={vehicles} />
 
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <div className="relative flex-1">
-          <Icon name="Search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar placa, cliente o admin..."
-            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-        </div>
-        <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
-          <option>Todas</option>
-          {ciudades.map((c) => <option key={c}>{c}</option>)}
-        </select>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
-          <option>Todos</option>
-          {ESTADOS_VEHICULO.map((e) => <option key={e}>{e}</option>)}
-        </select>
-      </div>
+
 
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">

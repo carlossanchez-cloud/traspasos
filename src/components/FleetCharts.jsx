@@ -11,14 +11,14 @@ function EstadoBar({ vehicles }) {
   const total = vehicles.length || 1
   const counts = ESTADOS.map((e) => ({ estado: e, n: vehicles.filter((v) => v.estado === e).length }))
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4">
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Flota por estado</p>
-      <div className="flex h-7 w-full rounded-full overflow-hidden bg-slate-100 gap-0.5">
+    <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3">
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Flota por estado</p>
+      <div className="flex h-3 w-full rounded-full overflow-hidden bg-slate-100 gap-0.5">
         {counts.map(({ estado, n }) => n > 0 && (
           <div key={estado} title={`${estado}: ${n}`} className={`${ESTADO_FILL[estado]} h-full`} style={{ width: `${(n / total) * 100}%` }} />
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
         {counts.map(({ estado, n }) => (
           <div key={estado} className="flex items-center gap-1.5 text-xs">
             <span className={`w-2.5 h-2.5 rounded-full ${ESTADO_FILL[estado]}`} />
@@ -35,10 +35,17 @@ function EstadoBar({ vehicles }) {
 // (el título ya nombra la serie), etiqueta directa del conteo al final de la barra.
 // Exportada: Informes.jsx la reusa para "top clientes" en vez de reimplementar el patrón.
 export function RankedBars({ title, data }) {
-  const max = Math.max(1, ...data.map((d) => d.n))
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-4">
       <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">{title}</p>
+      <Barras data={data} />
+    </div>
+  )
+}
+
+function Barras({ data }) {
+  const max = Math.max(1, ...data.map((d) => d.n))
+  return (
       <div className="flex flex-col gap-2.5">
         {data.map(({ label, n }) => (
           <div key={label} className="flex items-center gap-2" title={`${label}: ${n}`}>
@@ -51,7 +58,19 @@ export function RankedBars({ title, data }) {
         ))}
         {data.length === 0 && <p className="text-xs text-slate-400">Sin datos.</p>}
       </div>
-    </div>
+  )
+}
+
+// Misma grafica, pero cerrada por defecto: en Flota solo se abre cuando se quiere revisar.
+function Desplegable({ title, data }) {
+  return (
+    <details className="group bg-white border border-slate-200 rounded-2xl self-start">
+      <summary className="flex items-center justify-between gap-2 px-4 py-3 cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden">
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{title} <span className="normal-case font-semibold">({data.length})</span></span>
+        <span className="text-slate-400 text-xs transition-transform group-open:rotate-180">▼</span>
+      </summary>
+      <div className="px-4 pb-4"><Barras data={data} /></div>
+    </details>
   )
 }
 
@@ -64,10 +83,10 @@ const rank = (vehicles, key) => {
 export default function FleetCharts({ vehicles }) {
   if (vehicles.length === 0) return null
   return (
-    <div className="grid md:grid-cols-2 gap-3 mb-6">
+    <div className="grid md:grid-cols-2 gap-3 mb-4">
       <div className="md:col-span-2"><EstadoBar vehicles={vehicles} /></div>
-      <RankedBars title="Vehículos por ciudad" data={rank(vehicles, 'ciudad')} />
-      <RankedBars title="Vehículos por tipo" data={rank(vehicles, 'tipo_vehiculo')} />
+      <Desplegable title="Vehículos por ciudad" data={rank(vehicles, 'ciudad')} />
+      <Desplegable title="Vehículos por tipo" data={rank(vehicles, 'tipo_vehiculo')} />
     </div>
   )
 }
