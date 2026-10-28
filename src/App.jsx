@@ -16,6 +16,8 @@ import Ficha from './pages/Ficha'
 import ActaPublica from './pages/ActaPublica'
 import NotFound from './pages/NotFound'
 import MenuPrincipal from './pages/MenuPrincipal'
+import ModuloProximo from './pages/ModuloProximo'
+import { TEXTO_RECOBROS } from './lib/recobros'
 import GestionFlotaInicio, { SubmoduloEnConstruccion } from './pages/gestionFlota/GestionFlota'
 import { SUBMODULOS as SUBMODULOS_FLOTA } from './lib/gestionFlota'
 import InventarioInicio from './pages/inventario/Inicio'
@@ -123,6 +125,7 @@ export default function App() {
                 <Route path="/inventario" element={<InventarioInicio />} />
                 <Route path="/inventario/tecnico" element={<InventarioTecnico />} />
                 <Route path="/inventario/comercial" element={<InventarioComercial />} />
+                <Route path="/recobros" element={<ModuloProximo titulo="Recobros" texto={TEXTO_RECOBROS} />} />
                 <Route path="/gestion-flota" element={<RequireAdmin><GestionFlotaInicio /></RequireAdmin>} />
                 {SUBMODULOS_FLOTA.map(({ to: ruta }) => (
                   <Route key={ruta} path={ruta} element={<RequireAdmin><SubmoduloEnConstruccion ruta={ruta} /></RequireAdmin>} />

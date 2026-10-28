@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
+import { TEXTO_RECOBROS } from '../lib/recobros'
 
 // Pantalla de entrada despues del login: se escoge a que modulo entrar.
 // Gestion de flota es solo para administradores.
@@ -8,6 +9,7 @@ const MODULOS = [
   { to: '/sustitutos', titulo: 'Sustitutos', icon: 'Car', texto: 'Flota de vehículos sustitutos: mapa, solicitudes, actas (entregado al cliente y recibido por Rentandes) e informes.' },
   { to: '/inventario', titulo: 'Inventario', icon: 'ClipboardList', texto: 'Activos recuperados en venta o recolocación: parte técnica y comercial.' },
   { to: '/gestion-flota', titulo: 'Gestión de flota', icon: 'Wrench', texto: 'Mantenimiento, kilometraje adicional, costos de repuestos, documentos, rentabilidad por vehículo y KPIs.', soloAdmin: true },
+  { to: '/recobros', titulo: 'Recobros', icon: 'FileText', texto: TEXTO_RECOBROS, proximamente: true },
 ]
 
 export default function MenuPrincipal() {
@@ -29,7 +31,7 @@ export default function MenuPrincipal() {
         <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Flota Rentandes · Centro de gestión de activos</p>
         <h1 className="text-2xl font-black text-slate-800">Menú principal</h1>
         <p className="text-sm text-slate-500 mb-6">¿A qué módulo quieres entrar?</p>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 gap-4">
           {MODULOS.map((m) => {
             const bloqueado = m.soloAdmin && !isAdmin
             const contenido = (
@@ -41,7 +43,7 @@ export default function MenuPrincipal() {
                 <p className="text-sm text-slate-500 mt-1 flex-1">{m.texto}</p>
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {m.soloAdmin && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Solo administradores</span>}
-                  {m.proximamente && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Próximamente</span>}
+                  {m.proximamente && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">En construcción</span>}
                 </div>
               </>
             )
