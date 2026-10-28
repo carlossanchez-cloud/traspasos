@@ -6,7 +6,7 @@ import { formatCOP } from '../lib/inventario'
 import { waTextUrl, gmailTextUrl } from '../lib/shareLink'
 import { useToast } from '../lib/useToast'
 import { avisarSolicitudes } from '../lib/usePendientes'
-import { matchesSolicitud } from '../lib/matching'
+import { flotaParaSolicitud } from '../lib/matching'
 import Modal from '../components/Modal'
 import Row from '../components/Row'
 import Toast from '../components/Toast'
@@ -22,7 +22,8 @@ export default function Asignaciones() {
   const [solicitudes, setSolicitudes] = useState([])
   const [loadingSolicitudes, setLoadingSolicitudes] = useState(true)
   const [resolving, setResolving] = useState(null)
-  const [candidatos, setCandidatos] = useState([])
+  const [flota, setFlota] = useState({ exactos: [], otroTipo: [], ocupados: {}, total: 0 })
+  const candidatos = flota.exactos
   const [placaElegida, setPlacaElegida] = useState('')
   const [filtro, setFiltro] = useState('pendientes') // pendientes | completadas
   const [vehiculoActual, setVehiculoActual] = useState(null)
@@ -41,7 +42,7 @@ export default function Asignaciones() {
   const abrirResolucion = async (s) => {
     setResolving(s)
     setPlacaElegida('')
-    setCandidatos([])
+    setFlota({ exactos: [], otroTipo: [], ocupados: {}, total: 0 })
     setVehiculoActual(null)
     setTercero(null)
     if (s.estado !== 'Pendiente') {
@@ -53,14 +54,11 @@ export default function Asignaciones() {
       }
       return
     }
-    // Solo 'estado' se filtra exacto en el servidor (es un enum controlado). ciudad/tipo_vehiculo
-    // se comparan en el cliente con matchesSolicitud (case/espacios-insensible): datos reales
-    // (seed cargado a mano, ciudades agregadas en momentos distintos) traen inconsistencias de
-    // mayusculas/espacios que hacian que el .eq() exacto de antes no encontrara vehiculos que
-    // en realidad si aplicaban (ver src/lib/matching.js).
+    // Se trae toda la flota y se compara en el navegador (sin tildes, mayusculas ni espacios, ver
+    // src/lib/matching.js): asi, si no hay del tipo pedido, se ve que hay en la ciudad y por que no esta libre.
     setCargandoCandidatos(true)
-    const { data } = await supabase.from('vehicles').select('*').eq('estado', 'Disponible')
-    setCandidatos((data || []).filter((v) => matchesSolicitud(v, s)))
+    const { data } = await supabase.from('vehicles').select('*')
+    setFlota(flotaParaSolicitud(data || [], s))
     setCargandoCandidatos(false)
   }
 
@@ -187,9 +185,35 @@ export default function Asignaciones() {
             <Spinner label="Buscando vehículos disponibles..." className="py-4" />
           ) : candidatos.length === 0 ? (
             <div>
-              <p className="text-sm text-slate-500">No hay vehículos disponibles de ese tipo en esa ciudad ahora.</p>
+              <p className="text-sm text-slate-500">
+                No hay vehículos de tipo <strong>{resolving.tipo_vehiculo}</strong> disponibles en {resolving.ciudad} ahora.
+                {' '}{flota.total === 0
+                  ? `No hay vehículos registrados en ${resolving.ciudad}.`
+                  : `En ${resolving.ciudad} hay ${flota.total} vehículo(s): ${[
+                    flota.otroTipo.length && `${flota.otroTipo.length} disponible(s) de otro tipo`,
+                    ...Object.entries(flota.ocupados).map(([estado, n]) => `${n} ${estado === 'Taller' ? 'en taller' : estado.toLowerCase() + '(s)'}`),
+                  ].filter(Boolean).join(', ')}.`}
+              </p>
+              {flota.otroTipo.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Disponibles en {resolving.ciudad} de otro tipo</p>
+                  <div className="flex flex-col gap-2">
+                    {flota.otroTipo.map((v) => (
+                      <label key={v.id} className={`flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer ${placaElegida === v.placa ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200'}`}>
+                        <input type="radio" name="placa" checked={placaElegida === v.placa} onChange={() => { setPlacaElegida(v.placa); setTercero(null) }} />
+                        <span className="font-mono font-bold text-sm">{v.placa}</span>
+                        <span className="text-xs text-slate-500">{v.modelo}</span>
+                        <span className="ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{v.tipo_vehiculo || 'Sin tipo'}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex justify-end mt-3">
+                    <button onClick={resolver} disabled={!placaElegida} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50">Confirmar asignación</button>
+                  </div>
+                </div>
+              )}
               {!tercero ? (
-                <button onClick={() => setTercero({ proveedor: '', tarifa: '' })}
+                <button onClick={() => { setTercero({ proveedor: '', tarifa: '' }); setPlacaElegida('') }}
                   className="mt-3 w-full text-sm font-bold px-4 py-2.5 rounded-lg border-2 border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50">
                   + Arrendamiento tercerizado
                 </button>
