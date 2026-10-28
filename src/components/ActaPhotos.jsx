@@ -32,7 +32,7 @@ const firmar = async (path) => (path ? (await signAll([path]))[0] || null : null
 // Todo lo grafico del acta, en el orden del documento: recorrido, novedades, fotos adicionales del
 // gestor, fotos del cliente y las dos firmas. Es lo que sale tambien en el PDF.
 // `onCargado` avisa cuando ya estan todas las URLs (el PDF espera a eso antes de capturar).
-export default function ActaPhotos({ acta, onCargado }) {
+export default function ActaPhotos({ acta, onCargado, documento = false }) {
   const [g, setG] = useState(null)
   useEffect(() => { if (g) onCargado?.() }, [g, onCargado])
 
@@ -64,10 +64,10 @@ export default function ActaPhotos({ acta, onCargado }) {
   const vacio = !g.recorrido.length && !g.novedades.length && !g.adicionales.length && !g.cliente.length && !g.firma && !g.firmaCliente
   return (
     <div className="flex flex-col gap-4">
-      <Galeria titulo="Recorrido del vehículo" fotos={g.recorrido} />
-      <Galeria titulo="Fotos de novedades" fotos={g.novedades} />
-      <Galeria titulo="Fotos adicionales del gestor" fotos={g.adicionales} />
-      <Galeria titulo="Fotos del cliente" fotos={g.cliente} />
+      <Galeria titulo="Recorrido del vehículo" documento={documento} fotos={g.recorrido} />
+      <Galeria titulo="Fotos de novedades" documento={documento} fotos={g.novedades} />
+      <Galeria titulo="Fotos adicionales del gestor" documento={documento} fotos={g.adicionales} />
+      <Galeria titulo="Fotos del cliente" documento={documento} fotos={g.cliente} />
       {(g.firma || g.firmaCliente) && (
         <div className="grid grid-cols-2 gap-3">
           {g.firma && (
@@ -88,15 +88,17 @@ export default function ActaPhotos({ acta, onCargado }) {
   )
 }
 
-function Galeria({ titulo, fotos }) {
+// En el documento PDF van siempre 2 por fila, grandes; en pantalla, 3 desde tablet. La primera fila no es punto
+// de corte, para que el titulo nunca quede solo al final de una hoja.
+function Galeria({ titulo, fotos, documento }) {
   if (!fotos.length) return null
   return (
     <div>
       <p className="text-xs font-bold text-slate-500 uppercase mb-2" data-corte>{titulo} ({fotos.length})</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {fotos.map((f) => (
-          <a key={f.path} href={f.url} target="_blank" rel="noreferrer" className="block" data-corte>
-            <img src={f.url} alt={f.label} className="w-full h-24 object-cover rounded-lg border border-slate-200" />
+      <div className={`grid grid-cols-2 gap-2 ${documento ? '' : 'sm:grid-cols-3'}`}>
+        {fotos.map((f, i) => (
+          <a key={f.path} href={f.url} target="_blank" rel="noreferrer" className="block" data-corte={i >= 2 || undefined}>
+            <img src={f.url} alt={f.label} className="w-full aspect-[4/3] object-cover rounded-lg border border-slate-200" />
             <p className="text-[11px] text-slate-600 mt-1 leading-tight">{f.label}</p>
           </a>
         ))}

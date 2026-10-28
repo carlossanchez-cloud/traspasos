@@ -58,7 +58,7 @@ export default function ActaDocumento({ acta, vehiculo, entrega, onCargado }) {
       )}
 
       <div className="pt-5 border-t border-slate-200">
-        <ActaPhotos acta={acta} onCargado={onCargado} />
+        <ActaPhotos acta={acta} onCargado={onCargado} documento />
       </div>
 
       <p className="text-[10px] text-slate-400 mt-8 pt-3 border-t border-slate-100" data-corte>
