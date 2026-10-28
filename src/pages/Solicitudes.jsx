@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
+import { Icon } from '../lib/icons'
 import { todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
 import { avisarSolicitudes } from '../lib/usePendientes'
@@ -71,6 +72,10 @@ export default function Solicitudes() {
         <Field label="Cliente"><input value={form.cliente_empresa} onChange={set('cliente_empresa')} className={inputCls} /></Field>
         <Field label="Fecha requerida *"><input type="date" required value={form.fecha_inicio} onChange={set('fecha_inicio')} className={inputCls} /></Field>
         <Field label="Fecha estimada de devolución *"><input type="date" required min={form.fecha_inicio || undefined} value={form.fecha_fin} onChange={set('fecha_fin')} className={inputCls} /></Field>
+        <p className="sm:col-span-2 flex items-start gap-2 text-xs rounded-lg px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200">
+          <Icon name="AlertTriangle" className="w-4 h-4 shrink-0 mt-px" />
+          Tener en cuenta pico y placa en la ciudad donde se recoja y entregue el vehículo antes de realizar alguna movilización.
+        </p>
         <div className="sm:col-span-2">
           <Field label="Observaciones"><textarea value={form.observaciones} onChange={set('observaciones')} rows={2} className={inputCls} /></Field>
         </div>
