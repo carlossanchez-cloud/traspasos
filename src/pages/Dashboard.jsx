@@ -30,7 +30,7 @@ function StatCard({ label, value, tone, bar, icon }) {
     <div className="relative overflow-hidden bg-white border border-slate-200 rounded-xl px-4 py-2.5 pl-5">
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${bar}`} />
       <div className="flex items-center justify-between">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{label}</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wide truncate">{label}</p>
         <Icon name={icon} className={`w-4 h-4 ${tone} opacity-70`} />
       </div>
       <p className={`text-2xl font-black leading-tight mt-0.5 ${tone}`}>{value}</p>
@@ -103,13 +103,16 @@ export default function Dashboard() {
     return matchCity && matchStatus && matchSearch
   }), [vehicles, filterCity, filterStatus, search])
 
+  // Contadores y graficas siguen el filtro de ciudad (sin filtro = toda la flota). El de estado no se aplica:
+  // dejaria en cero los demas contadores.
+  const enCiudad = useMemo(() => (filterCity === 'Todas' ? vehicles : vehicles.filter((v) => v.ciudad === filterCity)), [vehicles, filterCity])
   const stats = useMemo(() => ({
-    total: vehicles.length,
-    disponibles: vehicles.filter((v) => v.estado === 'Disponible').length,
-    asignados: vehicles.filter((v) => v.estado === 'Asignado').length,
-    enProceso: vehicles.filter((v) => v.estado.startsWith('En proceso')).length,
-    taller: vehicles.filter((v) => v.estado === 'Taller').length,
-  }), [vehicles])
+    total: enCiudad.length,
+    disponibles: enCiudad.filter((v) => v.estado === 'Disponible').length,
+    asignados: enCiudad.filter((v) => v.estado === 'Asignado').length,
+    enProceso: enCiudad.filter((v) => v.estado.startsWith('En proceso')).length,
+    taller: enCiudad.filter((v) => v.estado === 'Taller').length,
+  }), [enCiudad])
 
   const openAdd = () => {
     setForm({ ...EMPTY_FORM, ciudad: ciudades[0] || '' })
@@ -185,7 +188,7 @@ export default function Dashboard() {
           media pantalla). */}
       <div className="md:sticky md:top-0 z-20 bg-slate-50 -mx-4 md:-mx-8 px-4 md:px-8 pt-2 pb-3 mb-3 md:border-b md:border-slate-200/70">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
-          <StatCard label="Total flota" value={stats.total} tone="text-slate-800" bar="bg-slate-300" icon="Car" />
+          <StatCard label={filterCity === 'Todas' ? 'Total flota' : `Flota ${filterCity}`} value={stats.total} tone="text-slate-800" bar="bg-slate-300" icon="Car" />
           <StatCard label="Disponibles" value={stats.disponibles} tone="text-emerald-600" bar="bg-emerald-500" icon="CheckCircle" />
           <StatCard label="En proceso" value={stats.enProceso} tone="text-amber-600" bar="bg-amber-500" icon="ClipboardList" />
           <StatCard label="Asignados" value={stats.asignados} tone="text-blue-600" bar="bg-blue-500" icon="User" />
@@ -209,7 +212,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <FleetCharts vehicles={vehicles} />
+      <FleetCharts vehicles={enCiudad} />
 
 
 
