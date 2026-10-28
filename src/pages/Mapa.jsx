@@ -19,7 +19,7 @@ function cityIcon(stats) {
       <div style="background:#fff;border-radius:12px;box-shadow:0 10px 15px -3px rgb(0 0 0 / .15);border:1px solid #e2e8f0;padding:6px;display:flex;flex-direction:column;align-items:center;width:100%;">
         <div style="font-weight:700;font-size:10px;color:#1e293b;margin-bottom:4px;">${escapeHtml(stats.city)}</div>
         <div style="display:flex;gap:4px;">
-          <span style="width:20px;height:20px;border-radius:6px;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Disponible}</span>
+          <span style="width:20px;height:20px;border-radius:6px;background:#e6fbf5;color:#00936c;border:1px solid #8cecd0;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Disponible}</span>
           <span style="width:20px;height:20px;border-radius:6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Asignado}</span>
           <span style="width:20px;height:20px;border-radius:6px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Taller}</span>
         </div>

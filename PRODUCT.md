@@ -59,7 +59,7 @@ este registra la prueba.
 
 ## Brand Commitments
 
-- Manual de marca Rentandes: verde principal #00d465 y secundario #018d66; Open Sans para web (Montserrat solo en el
+- Colores de rentandes.com: verde menta #00d79c y petróleo oscuro #003633 (encabezados, menú, títulos); Open Sans para web (Montserrat solo en el
   logo y documentos); logo rentandes (`public/rentandes-logo.png`).
 - Nombre del producto: "Flota Rentandes", subtítulo "Centro de gestión de activos Rentandes".
 - Todo en español de Colombia: textos, fechas y moneda (COP).
