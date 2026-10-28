@@ -30,6 +30,12 @@ export default function ActaDocumento({ acta, vehiculo, entrega, onCargado }) {
         </div>
       </div>
 
+      {acta.eliminada_en && (
+        <p className="mt-4 text-sm rounded-lg px-3 py-2 bg-red-50 text-red-700 border border-red-200">
+          <strong>Acta eliminada</strong> el {formatDate(acta.eliminada_en.slice(0, 10))}{acta.eliminada_por_email ? ` por ${acta.eliminada_por_email}` : ''}. Motivo: {acta.motivo_eliminacion}
+        </p>
+      )}
+
       <div className="grid grid-cols-3 gap-x-6 gap-y-3 py-5 border-b border-slate-200" data-corte>
         <Dato label="Cliente">{acta.cliente}</Dato>
         <Dato label="Conductor">{acta.conductor}</Dato>

@@ -23,6 +23,12 @@ export function agruparActas(actas) {
   return { ciclos, sueltas }
 }
 
+// Solo se eliminan actas incompletas (sin firma del cliente) y, si es una entrega, que no tenga su recibido. La
+// base de datos lo vuelve a validar (paso SQL 25) y exige que quien elimine sea Administrador general.
+// `activas` son las actas no eliminadas.
+export const puedeEliminarActa = (acta, activas) => !acta.eliminada_en && !acta.bloqueada
+  && !(acta.tipo === 'Entrega' && agruparActas(activas).ciclos.some((c) => c.entrega.id === acta.id && c.recibido))
+
 // Entrega de esa placa que todavia no tiene su acta de recibido (a lo sumo una, por la regla del ciclo).
 export const entregaAbierta = (actas, placa) =>
   agruparActas(actas).ciclos.find((c) => c.entrega.placa === placa && !c.recibido)?.entrega || null

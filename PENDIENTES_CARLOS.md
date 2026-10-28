@@ -16,6 +16,7 @@ rama pase a `main`. Todos se pueden volver a correr sin dañar nada.
 | 22 | `supabase/steps/22_rol_lector.sql` | Tercer rol, Lector (solo ver). Los correos nuevos entran como Lector y la base de datos les impide crear actas, solicitudes o subir fotos. Los usuarios actuales conservan su rol. |
 | 23 | `supabase/steps/23_inventario.sql` | Tablas del módulo Inventario (activos, pasos por inventario y ofertas). Todos los usuarios pueden ver; solo el Administrador general edita. |
 | 24 | `supabase/steps/24_fix_permiso_subir_fotos.sql` | **Urgente.** Arregla "permission denied for function acta_publica_abierta": sin esto el gestor no puede guardar ninguna acta (falla al subir fotos y firma). Una sola línea. |
+| 25 | `supabase/steps/25_eliminar_actas.sql` | Eliminar actas incompletas (sin firma del cliente), solo el Administrador general y con motivo. No se borran: quedan marcadas como eliminadas (fecha, quién, motivo) y la app las muestra en el filtro Eliminadas. Sin este paso, el botón Eliminar avisa que falta. |
 | — | `importar_inventario.sql` (lo tiene Alejo, **no está en el repositorio** porque trae precios y VPN reales) | Carga inicial del Excel BD_INVENTARIO_V2_4: 1.497 activos y 1.557 pasos por inventario. Correr una sola vez, después del 23; si ya hay datos se detiene sola. |
 
 Para confirmar que quedaron:
@@ -25,7 +26,13 @@ select column_name from information_schema.columns
 where table_name = 'actas' and column_name in ('firma_cliente_url', 'consecutivo', 'acta_entrega_id');
 ```
 
-Deben salir las 3 filas. Para el 22:
+Deben salir las 3 filas. Para el 25 debe salir 1 fila:
+
+```sql
+select column_name from information_schema.columns where table_name = 'actas' and column_name = 'eliminada_en';
+```
+
+Para el 22:
 
 ```sql
 select column_default from information_schema.columns where table_name = 'profiles' and column_name = 'role';

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { numActa, agruparActas, entregaAbierta } from './ciclosActas.js'
+import { numActa, agruparActas, entregaAbierta, puedeEliminarActa } from './ciclosActas.js'
 
 const acta = (id, tipo, placa, created_at, extra = {}) => ({ id, tipo, placa, created_at, ...extra })
 
@@ -40,4 +40,16 @@ test('agruparActas: sin la columna (paso 21 sin correr) toma la entrega de check
   ]
   assert.equal(agruparActas(actas).ciclos[0].recibido.id, 'r1')
   assert.equal(entregaAbierta(actas, 'AAA111'), null)
+})
+
+test('puedeEliminarActa: solo actas sin firma del cliente, no eliminadas, y entregas sin su recibido', () => {
+  const e1 = acta('e1', 'Entrega', 'AAA111', '2026-10-01')
+  const r1 = acta('r1', 'Recibido', 'AAA111', '2026-10-05', { acta_entrega_id: 'e1' })
+  const e2 = acta('e2', 'Entrega', 'BBB222', '2026-10-03')
+  const activas = [e1, r1, e2]
+  assert.equal(puedeEliminarActa(e1, activas), false) // ya tiene su recibido
+  assert.equal(puedeEliminarActa(r1, activas), true)
+  assert.equal(puedeEliminarActa(e2, activas), true)
+  assert.equal(puedeEliminarActa({ ...e2, bloqueada: true }, activas), false)
+  assert.equal(puedeEliminarActa({ ...e2, eliminada_en: '2026-10-28T10:00:00Z' }, activas), false)
 })

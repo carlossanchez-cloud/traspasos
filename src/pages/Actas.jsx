@@ -6,7 +6,7 @@ import { formatDate, formatKM, todayISO } from '../lib/format'
 import { guardarPdf } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto, FOTOS_RECORRIDO } from '../lib/actaChecklist'
-import { numActa, tipoActa, agruparActas, entregaAbierta } from '../lib/ciclosActas'
+import { numActa, tipoActa, agruparActas, entregaAbierta, puedeEliminarActa } from '../lib/ciclosActas'
 import { publicActaUrl, waShareUrl, gmailShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -25,10 +25,14 @@ const LINK_PUBLICO_SEGUNDOS = 90 * 24 * 3600
 const EMPTY = { tipo: 'Entrega', placa: '', acta_entrega_id: '', fecha: todayISO(), cliente: '', conductor: '', kilometraje: '', nivel_combustible: 'Lleno', observaciones: '' }
 
 export default function Actas() {
-  const { puedeEditar } = useAuth()
+  const { puedeEditar, isAdmin } = useAuth()
   const { toast, notify, clear } = useToast()
   const [placas, setPlacas] = useState([])
-  const [actas, setActas] = useState([])
+  const [todasActas, setActas] = useState([])
+  // Las eliminadas no cuentan para el ciclo entrega -> recibido; solo se ven en el filtro "Eliminadas".
+  const actas = todasActas.filter((a) => !a.eliminada_en)
+  const eliminadas = todasActas.filter((a) => a.eliminada_en)
+  const [eliminando, setEliminando] = useState(null) // { acta, motivo, enviando }
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState(EMPTY)
   const [checklist, setChecklist] = useState(emptyChecklist())
@@ -172,7 +176,7 @@ export default function Actas() {
       const idEntrega = viewing.acta_entrega_id || viewing.checklist?.acta_entrega_id
       let listo
       const cargado = new Promise((r) => { listo = r })
-      setPdfActa({ acta: viewing, vehiculo, entrega: actas.find((a) => a.id === idEntrega) || null, listo })
+      setPdfActa({ acta: viewing, vehiculo, entrega: todasActas.find((a) => a.id === idEntrega) || null, listo })
       await cargado
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
       const tipo = viewing.tipo === 'Entrega' ? 'Entregado_al_cliente' : 'Recibido_por_Rentandes'
@@ -183,6 +187,23 @@ export default function Actas() {
       setPdfActa(null)
       setExporting(false)
     }
+  }
+
+  // Eliminar no borra el acta: la marca como eliminada con fecha, quien y motivo (paso SQL 25).
+  const eliminar = async () => {
+    if (!eliminando.motivo.trim()) { notify('Escribe el motivo de la eliminación.', 'error'); return }
+    setEliminando((e) => ({ ...e, enviando: true }))
+    const { error } = await supabase.rpc('eliminar_acta', { p_acta_id: eliminando.acta.id, p_motivo: eliminando.motivo.trim() })
+    if (error) {
+      const falta = /eliminar_acta|schema cache|could not find/i.test(error.message)
+      notify(falta ? 'Falta un ajuste en la base de datos (paso SQL 25, pendiente de Carlos).' : error.message, 'error')
+      setEliminando((e) => ({ ...e, enviando: false }))
+      return
+    }
+    notify(`${numActa(eliminando.acta)} eliminada. Queda en el filtro Eliminadas.`, 'success')
+    setEliminando(null)
+    setViewing(null)
+    load()
   }
 
   return (
@@ -201,10 +222,10 @@ export default function Actas() {
 
       {loading ? (
         <Spinner label="Cargando actas..." />
-      ) : actas.length === 0 ? (
+      ) : todasActas.length === 0 ? (
         <p className="text-sm text-slate-400 py-10 text-center">Sin actas registradas todavía.</p>
       ) : (
-        <ListaCiclos actas={actas} filtro={filtro} setFiltro={setFiltro}
+        <ListaCiclos actas={actas} eliminadas={eliminadas} filtro={filtro} setFiltro={setFiltro}
           onVer={setViewing} onEnviar={puedeEditar ? setCompartiendo : null}
           onRecibir={puedeEditar ? (e) => openCreate({ tipo: 'Recibido', placa: e.placa }) : null} />
       )}
@@ -333,6 +354,7 @@ export default function Actas() {
       {viewing && (
         <Modal title={`${numActa(viewing)} — ${viewing.placa} — ${tipoActa(viewing)} — ${formatDate(viewing.fecha)}`} onClose={() => setViewing(null)}>
           <div className="bg-white">
+            {viewing.eliminada_en && <AvisoEliminada acta={viewing} />}
             <div className="flex items-center justify-between mb-1">
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${viewing.bloqueada ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                 {viewing.bloqueada ? 'Firmada por el cliente' : 'Pendiente de firma del cliente'}
@@ -361,16 +383,43 @@ export default function Actas() {
             </div>
           </div>
 
-          {!viewing.bloqueada && puedeEditar && (
+          {!viewing.bloqueada && !viewing.eliminada_en && puedeEditar && (
             <div className="mt-4 pt-4 border-t border-slate-100">
               <EnviarFirma acta={viewing} notify={notify} />
             </div>
           )}
 
-          <div className="flex justify-end mt-5 pt-4 border-t border-slate-100">
+          <div className="flex justify-between gap-2 mt-5 pt-4 border-t border-slate-100">
+            {isAdmin && puedeEliminarActa(viewing, actas) ? (
+              <button onClick={() => setEliminando({ acta: viewing, motivo: '', enviando: false })}
+                className="flex items-center gap-2 text-red-700 border border-red-200 hover:bg-red-50 text-sm font-bold px-4 py-2 rounded-lg">
+                <Icon name="Trash2" className="w-4 h-4" /> Eliminar acta
+              </button>
+            ) : <span />}
             <button onClick={downloadPDF} disabled={exporting} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50">
               {exporting ? <ButtonSpinner /> : <Icon name="Download" className="w-4 h-4" />}
               {exporting ? 'Generando...' : 'Descargar PDF'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {eliminando && (
+        <Modal title={`Eliminar ${numActa(eliminando.acta)} — ${eliminando.acta.placa}`} onClose={() => !eliminando.enviando && setEliminando(null)}>
+          <p className="text-sm text-slate-600">
+            El acta {tipoActa(eliminando.acta).toLowerCase()} {numActa(eliminando.acta)} sale de la lista y su enlace de firma deja de
+            funcionar. No se borra: queda en el filtro <strong>Eliminadas</strong> con la fecha, tu correo y el motivo.
+          </p>
+          <div className="mt-3">
+            <Field label="Motivo (obligatorio)">
+              <textarea value={eliminando.motivo} onChange={(e) => setEliminando((x) => ({ ...x, motivo: e.target.value }))} rows={3}
+                placeholder="Ej.: se creó con la placa equivocada" className={inputCls} />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <button onClick={() => setEliminando(null)} disabled={eliminando.enviando} className="text-sm font-bold px-4 py-2 rounded-lg border border-slate-300 text-slate-700">Cancelar</button>
+            <button onClick={eliminar} disabled={eliminando.enviando} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50">
+              {eliminando.enviando && <ButtonSpinner />} Eliminar acta
             </button>
           </div>
         </Modal>
@@ -420,7 +469,7 @@ function AvisoCiclo({ form, abierta }) {
 
 // Actas agrupadas por ciclo: cada Entrega con su Recibido debajo (o el aviso de que falta), y aparte los
 // Recibido que no tienen Entrega en la app.
-function ListaCiclos({ actas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
+function ListaCiclos({ actas, eliminadas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
   const { ciclos, sueltas } = agruparActas(actas)
   const pendientes = ciclos.filter((c) => !c.recibido)
   const completas = ciclos.filter((c) => c.recibido)
@@ -437,7 +486,19 @@ function ListaCiclos({ actas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
         {tab('pendientes', 'Pendientes por recibir', pendientes.length)}
         {tab('completas', 'Entregado y recibido', completas.length)}
         {tab('todas', 'Todas', ciclos.length)}
+        {tab('eliminadas', 'Eliminadas', eliminadas.length)}
       </div>
+      {filtro === 'eliminadas' ? (
+        eliminadas.length === 0 ? <p className="text-sm text-slate-400 py-6 text-center">No hay actas eliminadas.</p> : (
+          <div className="flex flex-col gap-2">
+            {eliminadas.map((a) => (
+              <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden opacity-60">
+                <FilaActa acta={a} onVer={onVer} conPlaca />
+              </div>
+            ))}
+          </div>
+        )
+      ) : <>
       {visibles.length === 0 && <p className="text-sm text-slate-400 py-6 text-center">No hay actas en este grupo.</p>}
       <div className="flex flex-col gap-3">
         {visibles.map(({ entrega, recibido }) => (
@@ -470,7 +531,17 @@ function ListaCiclos({ actas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
           </div>
         </div>
       )}
+      </>}
     </div>
+  )
+}
+
+function AvisoEliminada({ acta }) {
+  return (
+    <p className="mb-3 text-xs rounded-lg px-3 py-2 bg-slate-100 text-slate-700 border border-slate-300">
+      <strong>Acta eliminada</strong> el {formatDate(acta.eliminada_en.slice(0, 10))}{acta.eliminada_por_email ? ` por ${acta.eliminada_por_email}` : ''}.
+      {' '}Motivo: {acta.motivo_eliminacion || '—'}
+    </p>
   )
 }
 
@@ -482,8 +553,15 @@ function FilaActa({ acta, onVer, onEnviar, conPlaca }) {
           <span className="font-mono">{numActa(acta)}</span> · {tipoActa(acta)}{conPlaca ? <> · <span className="font-mono">{acta.placa}</span></> : null} · {acta.cliente}
         </p>
         <p className="text-xs text-slate-500">{formatDate(acta.fecha)} · {acta.conductor || 'sin conductor registrado'} · {acta.fotos_urls?.length || 0} foto(s)</p>
+        {acta.eliminada_en && (
+          <p className="text-xs text-slate-500 mt-0.5">Motivo: {acta.motivo_eliminacion || '—'}{acta.eliminada_por_email ? ` · ${acta.eliminada_por_email}` : ''}</p>
+        )}
       </button>
-      {acta.bloqueada ? (
+      {acta.eliminada_en ? (
+        <span className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-slate-200 text-slate-600 border border-slate-300">
+          Eliminada el {formatDate(acta.eliminada_en.slice(0, 10))}
+        </span>
+      ) : acta.bloqueada ? (
         <button onClick={() => onVer(acta)}
           className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
           ✓ Firmada por el cliente
