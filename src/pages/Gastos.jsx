@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { STATUS_STYLE } from '../lib/format'
 import { GASTOS, GASTOS_FUENTE, totalMes, totalDia, depreciacionMes } from '../lib/gastosSustitutos'
@@ -36,6 +36,7 @@ export default function Gastos() {
   const [orden, setOrden] = useState({ col: 'total', desc: true })
   const [abierta, setAbierta] = useState(null)
   const [verFuera, setVerFuera] = useState(false)
+  const { asignar: tablaRef, medir, mover, izq, der, visible } = useDesplazamiento()
   useEffect(() => {
     supabase.from('vehicles').select('placa, modelo, estado, ciudad').order('placa').then(({ data }) => setVehiculos(data || []))
   }, [])
@@ -98,11 +99,11 @@ export default function Gastos() {
         </select>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+      <div ref={tablaRef} onScroll={medir} className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
         <table className="w-full text-[13px] tabular-nums">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th onClick={() => ordenar('placa')} className={`${th} text-left`}>Placa{flecha('placa')}</th>
+              <th onClick={() => ordenar('placa')} className={`${th} text-left sticky left-0 z-10 bg-slate-50`}>Placa{flecha('placa')}</th>
               <th onClick={() => ordenar('ciudad')} className={`${th} text-left`}>Ciudad{flecha('ciudad')}</th>
               <th className={`${th} text-left cursor-default hover:text-slate-500 hidden md:table-cell`}>Referencia</th>
               <th onClick={() => ordenar('total')} className={`${th} text-right text-slate-800 bg-emerald-50`}>Total mes{flecha('total')}</th>
@@ -119,7 +120,7 @@ export default function Gastos() {
                 <Fragment key={f.placa}>
                   <tr onClick={() => g && setAbierta(abiertaEsta ? null : f.placa)}
                     className={`border-b border-slate-100 ${g ? 'cursor-pointer hover:bg-slate-50 xl:cursor-default xl:hover:bg-transparent' : 'text-slate-400'}`}>
-                    <td className="px-2 py-2.5 font-mono font-bold text-slate-800 whitespace-nowrap">
+                    <td className="px-2 py-2.5 font-mono font-bold text-slate-800 whitespace-nowrap sticky left-0 z-10 bg-white">
                       {estilo && <span className={`inline-block w-2 h-2 rounded-full mr-2 align-middle ${estilo.dot}`} title={f.estado} />}{f.placa}
                     </td>
                     <td className="px-2 py-2.5 text-slate-600 whitespace-nowrap">{f.ciudad || '—'}</td>
@@ -149,7 +150,8 @@ export default function Gastos() {
           </tbody>
           <tfoot className="bg-slate-50 border-t-2 border-slate-200 font-bold text-slate-800">
             <tr>
-              <td className="px-2 py-2.5" colSpan={2}>Total ({conGastos.length})</td>
+              <td className="px-2 py-2.5 sticky left-0 z-10 bg-slate-50 whitespace-nowrap">Total ({conGastos.length})</td>
+              <td />
               <td className="hidden md:table-cell" />
               <td className="px-2 py-2.5 text-right bg-emerald-100/60 whitespace-nowrap">{pesos(sumaMes)}</td>
               <td className="px-2 py-2.5 text-right hidden sm:table-cell border-r border-slate-200">{pesos(sumaMes / 30)}</td>
@@ -158,6 +160,15 @@ export default function Gastos() {
           </tfoot>
         </table>
       </div>
+      {(izq || der) && visible && (
+        // Botones flotantes para moverse a los lados de la tabla sin bajar hasta su barra de desplazamiento.
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 flex gap-1 bg-slate-900/90 text-white rounded-full p-1 shadow-lg">
+          <button onClick={() => mover(-1)} disabled={!izq} aria-label="Ver columnas de la izquierda"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-lg hover:bg-white/15 disabled:opacity-30">◀</button>
+          <button onClick={() => mover(1)} disabled={!der} aria-label="Ver columnas de la derecha"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-lg hover:bg-white/15 disabled:opacity-30">▶</button>
+        </div>
+      )}
       <p className="text-[11px] text-slate-400 mt-2 xl:hidden">Toca una fila para ver el detalle de sus gastos.</p>
 
       {fueraDeFlota.length > 0 && (
@@ -189,6 +200,27 @@ export default function Gastos() {
       </p>
     </div>
   )
+}
+
+// Sabe si la tabla tiene columnas ocultas a la izquierda o a la derecha y si esta a la vista, y la mueve
+// de a 60 % de su ancho visible. `ref` es un callback ref: la tabla aparece despues de cargar la flota.
+function useDesplazamiento() {
+  const [el, setEl] = useState(null)
+  const [estado, setEstado] = useState({ izq: false, der: false, visible: false })
+  const medir = useCallback(() => {
+    if (!el) return
+    setEstado((e) => ({ ...e, izq: el.scrollLeft > 2, der: el.scrollLeft + el.clientWidth < el.scrollWidth - 2 }))
+  }, [el])
+  useEffect(() => {
+    if (!el) return
+    const ro = new ResizeObserver(medir)
+    ro.observe(el)
+    const io = new IntersectionObserver(([e]) => setEstado((s) => ({ ...s, visible: e.isIntersecting })))
+    io.observe(el)
+    return () => { ro.disconnect(); io.disconnect() }
+  }, [el, medir])
+  const mover = (dir) => el?.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: 'smooth' })
+  return { asignar: setEl, medir, mover, ...estado }
 }
 
 function Resumen({ label, valor, fuerte }) {
