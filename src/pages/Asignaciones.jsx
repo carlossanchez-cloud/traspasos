@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate, formatKM, diasRequeridos, isExpired } from '../lib/format'
 import { datosVehiculoAsignado, resumenAsignacion } from '../lib/asignaciones'
@@ -9,7 +9,10 @@ import { matchesSolicitud } from '../lib/matching'
 import Modal from '../components/Modal'
 import Row from '../components/Row'
 import Toast from '../components/Toast'
-import Spinner from '../components/Spinner'
+import Spinner, { ButtonSpinner } from '../components/Spinner'
+import AsignacionDocumento from '../components/AsignacionDocumento'
+import { guardarPdf } from '../lib/pdf'
+import { Icon } from '../lib/icons'
 
 // Solicitudes de sustituto que esperan vehiculo (antes salian debajo del formulario de Solicitar). Solo
 // administradores: asignar llama la RPC resolve_solicitud, que tambien lo exige.
@@ -149,7 +152,7 @@ export default function Asignaciones() {
           </div>
 
           {resolving.estado !== 'Pendiente' ? (
-            <VehiculoAsignado solicitud={resolving} v={datosVehiculoAsignado(resolving, vehiculoActual)} />
+            <VehiculoAsignado solicitud={resolving} v={datosVehiculoAsignado(resolving, vehiculoActual)} notify={notify} />
           ) : <>
           <p className="text-xs font-bold text-slate-500 uppercase mt-5 mb-2">Asignar vehículo: {resolving.tipo_vehiculo} disponible en {resolving.ciudad}</p>
           {candidatos.length === 0 ? (
@@ -179,8 +182,22 @@ export default function Asignaciones() {
 
 // Vehiculo de una solicitud completada, para compartirlo con el gestor de flota y comparar despues con el
 // acta de entrega.
-function VehiculoAsignado({ solicitud, v }) {
+function VehiculoAsignado({ solicitud, v, notify }) {
   const texto = resumenAsignacion(solicitud, v)
+  const [generando, setGenerando] = useState(false)
+  const docRef = useRef(null)
+  const descargar = async () => {
+    setGenerando(true)
+    try {
+      await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)))
+      const fecha = (solicitud.resuelta_at || '').slice(0, 10)
+      await guardarPdf(docRef.current, `Asignacion_${solicitud.vehiculo_asignado_placa}_${solicitud.cliente_empresa}_${fecha}.pdf`.replace(/[^\w.-]+/g, '_'))
+    } catch (err) {
+      notify('No se pudo generar el PDF: ' + err.message, 'error')
+    } finally {
+      setGenerando(false)
+    }
+  }
   const btn = 'flex-1 text-center text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
   const vence = (fecha) => (fecha ? <span className={isExpired(fecha) ? 'text-red-600' : ''}>{formatDate(fecha)}{isExpired(fecha) ? ' (vencido)' : ''}</span> : '—')
   return (
@@ -217,7 +234,16 @@ function VehiculoAsignado({ solicitud, v }) {
       <div className="flex gap-2">
         <a href={waTextUrl(texto)} target="_blank" rel="noreferrer" className={btn}>WhatsApp</a>
         <a href={gmailTextUrl(`Asignación de sustituto ${solicitud.vehiculo_asignado_placa} — ${solicitud.cliente_empresa}`, texto)} target="_blank" rel="noreferrer" className={btn}>Gmail</a>
+        <button onClick={descargar} disabled={generando} className={`${btn} flex items-center justify-center gap-1.5 disabled:opacity-50`}>
+          {generando ? <ButtonSpinner /> : <Icon name="Download" className="w-3.5 h-3.5" />} {generando ? 'Generando...' : 'Descargar PDF'}
+        </button>
       </div>
+      {/* El documento del PDF se dibuja fuera de la pantalla solo mientras se genera. */}
+      {generando && (
+        <div style={{ position: 'fixed', left: -10000, top: 0 }} aria-hidden="true">
+          <div ref={docRef}><AsignacionDocumento solicitud={solicitud} v={v} /></div>
+        </div>
+      )}
     </div>
   )
 }
