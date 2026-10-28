@@ -239,8 +239,9 @@ export default function Dashboard() {
             return (
               <div key={v.id} role="button" tabIndex={0} onClick={() => openEdit(v)}
                 onKeyDown={(e) => { if (e.key === 'Enter') openEdit(v) }}
-                className="text-left bg-white border border-slate-300 rounded-2xl overflow-hidden shadow-sm shadow-slate-900/10 hover:shadow-lg hover:border-emerald-500 hover:-translate-y-0.5 transition-all cursor-pointer">
-                <div className="bg-gradient-to-b from-slate-50 to-slate-100 border-b border-slate-200 flex items-center justify-center px-4 pt-4 pb-2">
+                className={`text-left bg-white border border-slate-300 border-t-4 ${style.top} rounded-2xl overflow-hidden shadow-sm shadow-slate-900/10 hover:shadow-lg hover:border-emerald-500 hover:-translate-y-0.5 transition-all cursor-pointer`}>
+                <div className={`relative bg-gradient-to-b ${style.tint} border-b border-slate-200 flex items-center justify-center px-4 pt-4 pb-2`}>
+                  <span className={`absolute top-2 left-2 text-xs font-black uppercase tracking-wide px-2.5 py-1 rounded-lg shadow-sm ${style.solid}`}>{v.estado}</span>
                   <VehiclePhoto vehicle={v} className="w-full h-20" />
                 </div>
                 <div className="p-4">
@@ -249,7 +250,6 @@ export default function Dashboard() {
                     <p className="font-mono font-bold text-slate-800">{v.placa}</p>
                     <p className="text-xs text-slate-500 truncate max-w-[150px]" title={v.modelo}>{v.modelo}</p>
                   </div>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${style.badge}`}>{v.estado}</span>
                 </div>
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
                   <Icon name="MapPin" className="w-3.5 h-3.5" /> {v.ciudad}

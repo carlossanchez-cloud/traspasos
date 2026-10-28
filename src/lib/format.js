@@ -22,12 +22,14 @@ export const daysDiff = (fromISO, toISO = todayISO()) => {
   return Math.round((b - a) / 86400000)
 }
 
+// dot: punto/barra; badge: etiqueta suave; solid: etiqueta llena (tarjetas de Flota); top: franja de color arriba de
+// la tarjeta; tint: fondo de la foto del vehiculo.
 export const STATUS_STYLE = {
-  Disponible: { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  'En proceso de entrega': { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  Asignado: { dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  'En proceso de recepción': { dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
-  Taller: { dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-200' },
+  Disponible: { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', solid: 'bg-emerald-500 text-white', top: 'border-t-emerald-500', tint: 'from-emerald-50 to-emerald-100/70' },
+  'En proceso de entrega': { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200', solid: 'bg-amber-500 text-white', top: 'border-t-amber-500', tint: 'from-amber-50 to-amber-100/70' },
+  Asignado: { dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-200', solid: 'bg-blue-600 text-white', top: 'border-t-blue-600', tint: 'from-blue-50 to-blue-100/70' },
+  'En proceso de recepción': { dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200', solid: 'bg-violet-600 text-white', top: 'border-t-violet-600', tint: 'from-violet-50 to-violet-100/70' },
+  Taller: { dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-200', solid: 'bg-red-600 text-white', top: 'border-t-red-600', tint: 'from-red-50 to-red-100/70' },
 }
 
 // Dias que se necesita el sustituto: de la fecha requerida a la devolucion estimada (la diferencia entre las
