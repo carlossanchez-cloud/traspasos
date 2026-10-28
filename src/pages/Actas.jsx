@@ -227,7 +227,8 @@ export default function Actas() {
       ) : (
         <ListaCiclos actas={actas} eliminadas={eliminadas} filtro={filtro} setFiltro={setFiltro}
           onVer={setViewing} onEnviar={puedeEditar ? setCompartiendo : null}
-          onRecibir={puedeEditar ? (e) => openCreate({ tipo: 'Recibido', placa: e.placa }) : null} />
+          onRecibir={puedeEditar ? (e) => openCreate({ tipo: 'Recibido', placa: e.placa }) : null}
+          onEliminar={isAdmin ? (a) => setEliminando({ acta: a, motivo: '', enviando: false }) : null} />
       )}
 
       {creating && (
@@ -469,7 +470,8 @@ function AvisoCiclo({ form, abierta }) {
 
 // Actas agrupadas por ciclo: cada Entrega con su Recibido debajo (o el aviso de que falta), y aparte los
 // Recibido que no tienen Entrega en la app.
-function ListaCiclos({ actas, eliminadas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
+function ListaCiclos({ actas, eliminadas, filtro, setFiltro, onVer, onEnviar, onRecibir, onEliminar }) {
+  const elim = (a) => (onEliminar && puedeEliminarActa(a, actas) ? onEliminar : null)
   const { ciclos, sueltas } = agruparActas(actas)
   const pendientes = ciclos.filter((c) => !c.recibido)
   const completas = ciclos.filter((c) => c.recibido)
@@ -507,9 +509,9 @@ function ListaCiclos({ actas, eliminadas, filtro, setFiltro, onVer, onEnviar, on
               <span className="font-mono text-sm">{entrega.placa}</span>
               <span>{recibido ? '✓ Entregado y recibido' : 'Pendiente: recibido por Rentandes'}</span>
             </div>
-            <FilaActa acta={entrega} onVer={onVer} onEnviar={onEnviar} />
+            <FilaActa acta={entrega} onVer={onVer} onEnviar={onEnviar} onEliminar={elim(entrega)} />
             {recibido ? (
-              <div className="border-t border-slate-100"><FilaActa acta={recibido} onVer={onVer} onEnviar={onEnviar} /></div>
+              <div className="border-t border-slate-100"><FilaActa acta={recibido} onVer={onVer} onEnviar={onEnviar} onEliminar={elim(recibido)} /></div>
             ) : onRecibir && (
               <div className="border-t border-slate-100 px-4 py-3 flex justify-end">
                 <button onClick={() => onRecibir(entrega)}
@@ -526,7 +528,7 @@ function ListaCiclos({ actas, eliminadas, filtro, setFiltro, onVer, onEnviar, on
           <p className="text-xs font-bold text-slate-500 uppercase mb-2">Recibidos por Rentandes sin acta entregado al cliente en la app ({sueltas.length})</p>
           <div className="flex flex-col gap-2">
             {sueltas.map((r) => (
-              <div key={r.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden"><FilaActa acta={r} onVer={onVer} onEnviar={onEnviar} conPlaca /></div>
+              <div key={r.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden"><FilaActa acta={r} onVer={onVer} onEnviar={onEnviar} onEliminar={elim(r)} conPlaca /></div>
             ))}
           </div>
         </div>
@@ -545,7 +547,7 @@ function AvisoEliminada({ acta }) {
   )
 }
 
-function FilaActa({ acta, onVer, onEnviar, conPlaca }) {
+function FilaActa({ acta, onVer, onEnviar, onEliminar, conPlaca }) {
   return (
     <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <button onClick={() => onVer(acta)} className="text-left flex-1 min-w-0">
@@ -576,6 +578,12 @@ function FilaActa({ acta, onVer, onEnviar, conPlaca }) {
         <span className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
           Pendiente de firma del cliente
         </span>
+      )}
+      {onEliminar && (
+        <button onClick={() => onEliminar(acta)} title="Eliminar acta"
+          className="shrink-0 self-start sm:self-auto flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50">
+          <Icon name="Trash2" className="w-4 h-4" /> Eliminar
+        </button>
       )}
     </div>
   )
