@@ -25,7 +25,8 @@ export default function Asignaciones() {
   const [flota, setFlota] = useState({ exactos: [], otroTipo: [], ocupados: {}, total: 0 })
   const candidatos = flota.exactos
   const [placaElegida, setPlacaElegida] = useState('')
-  const [filtro, setFiltro] = useState('pendientes') // pendientes | completadas
+  const [filtro, setFiltro] = useState('pendientes') // pendientes | completadas | canceladas
+  const [cancelando, setCancelando] = useState(null) // { motivo, enviando } mientras se cancela la solicitud abierta
   const [vehiculoActual, setVehiculoActual] = useState(null)
   const [cargandoCandidatos, setCargandoCandidatos] = useState(false)
   const [tercero, setTercero] = useState(null) // { proveedor, tarifa } mientras se llena el arrendamiento tercerizado
@@ -45,6 +46,7 @@ export default function Asignaciones() {
     setFlota({ exactos: [], otroTipo: [], ocupados: {}, total: 0 })
     setVehiculoActual(null)
     setTercero(null)
+    setCancelando(null)
     if (s.estado !== 'Pendiente') {
       // Completada: solo se consulta. Si no tiene la copia del vehiculo al asignar (paso SQL 27), se traen
       // los datos actuales del vehiculo.
@@ -98,6 +100,25 @@ export default function Asignaciones() {
 
   const pendientes = solicitudes.filter((s) => s.estado === 'Pendiente')
   // Completadas: las ya asignadas, la ultima asignada primero.
+  // El cliente ya no necesita el sustituto (paso SQL 30): la solicitud queda Cancelada, con su motivo.
+  const cancelar = async () => {
+    if (!cancelando.motivo.trim()) { notify('Escribe el motivo de la cancelación.', 'error'); return }
+    setCancelando((c) => ({ ...c, enviando: true }))
+    const { error } = await supabase.rpc('cancelar_solicitud', { p_solicitud_id: resolving.id, p_motivo: cancelando.motivo.trim() })
+    if (error) {
+      const falta = /cancelar_solicitud|schema cache|could not find/i.test(error.message)
+      notify(falta ? 'Falta un ajuste en la base de datos (paso SQL 30, pendiente de Carlos).' : error.message, 'error')
+      setCancelando((c) => ({ ...c, enviando: false }))
+      return
+    }
+    notify(`Solicitud de ${resolving.cliente_empresa} cancelada. Queda en la pestaña Canceladas.`, 'success')
+    setResolving(null)
+    loadSolicitudes()
+    avisarSolicitudes()
+  }
+
+  const canceladas = solicitudes.filter((s) => s.estado === 'Cancelada')
+    .sort((a, b) => (b.cancelada_at || '').localeCompare(a.cancelada_at || ''))
   const completadas = solicitudes.filter((s) => s.estado === 'Resuelta')
     .sort((a, b) => (b.resuelta_at || '').localeCompare(a.resuelta_at || ''))
   const tab = (key, label, n) => (
@@ -115,6 +136,7 @@ export default function Asignaciones() {
       <div className="flex flex-wrap gap-2 mb-4">
         {tab('pendientes', 'Pendientes por asignar', pendientes.length)}
         {tab('completadas', 'Completadas', completadas.length)}
+        {tab('canceladas', 'Canceladas', canceladas.length)}
       </div>
 
       {loadingSolicitudes ? (
@@ -132,6 +154,25 @@ export default function Asignaciones() {
                   {s.observaciones && <p className="text-xs text-slate-500 mt-0.5 truncate max-w-md" title={s.observaciones}>Obs.: {s.observaciones}</p>}
                 </div>
                 <button onClick={() => abrirResolucion(s)} className="shrink-0 ml-3 text-xs font-bold px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Ver y asignar</button>
+              </div>
+            ))}
+          </div>
+        )
+      ) : filtro === 'canceladas' ? (
+        canceladas.length === 0 ? (
+          <p className="text-sm text-slate-400">No hay solicitudes canceladas.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {canceladas.map((s) => (
+              <div key={s.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between opacity-75">
+                <div>
+                  <p className="font-bold text-slate-700 text-sm">{s.tipo_vehiculo} en {s.ciudad} — {s.cliente_empresa}</p>
+                  <p className="text-xs text-slate-500">Solicitado por {s.admin_flota} · sustituye a {s.placa_contrato} · desde {formatDate(s.fecha_inicio)}</p>
+                  <p className="text-xs font-bold text-slate-600 mt-0.5">
+                    ✕ Cancelada{s.cancelada_at ? ` el ${formatDate(s.cancelada_at.slice(0, 10))}` : ''}{s.motivo_cancelacion ? ` · ${s.motivo_cancelacion}` : ''}
+                  </p>
+                </div>
+                <button onClick={() => abrirResolucion(s)} className="shrink-0 ml-3 text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Ver</button>
               </div>
             ))}
           </div>
@@ -157,7 +198,7 @@ export default function Asignaciones() {
       )}
 
       {resolving && (
-        <Modal title={`Solicitud${resolving.estado === 'Pendiente' ? '' : ' completada'} — ${resolving.cliente_empresa}`} onClose={() => setResolving(null)}>
+        <Modal title={`Solicitud${{ Resuelta: ' completada', Cancelada: ' cancelada' }[resolving.estado] || ''} — ${resolving.cliente_empresa}`} onClose={() => setResolving(null)}>
           {/* Primero la solicitud completa, tal como se lleno en Solicitar; abajo, el vehiculo a asignar. */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
             <Row label="Cliente" value={resolving.cliente_empresa} />
@@ -177,7 +218,12 @@ export default function Asignaciones() {
             </p>
           </div>
 
-          {resolving.estado !== 'Pendiente' ? (
+          {resolving.estado === 'Cancelada' ? (
+            <p className="mt-5 text-sm rounded-lg px-3 py-2 bg-slate-100 text-slate-700 border border-slate-300">
+              <strong>Cancelada</strong>{resolving.cancelada_at ? ` el ${formatDate(resolving.cancelada_at.slice(0, 10))}` : ''}.
+              {' '}Motivo: {resolving.motivo_cancelacion || '—'}
+            </p>
+          ) : resolving.estado !== 'Pendiente' ? (
             <VehiculoAsignado solicitud={resolving} v={datosVehiculoAsignado(resolving, vehiculoActual)} notify={notify} />
           ) : <>
           <p className="text-xs font-bold text-slate-500 uppercase mt-5 mb-2">Asignar vehículo: {resolving.tipo_vehiculo} disponible en {resolving.ciudad}</p>
@@ -259,6 +305,31 @@ export default function Asignaciones() {
           {!cargandoCandidatos && candidatos.length > 0 && <div className="flex justify-end mt-4">
             <button onClick={resolver} disabled={!placaElegida} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50">Confirmar asignación</button>
           </div>}
+
+          {/* Cancelar: el cliente ya no necesita el sustituto. */}
+          <div className="mt-6 pt-4 border-t border-slate-100">
+            {!cancelando ? (
+              <button onClick={() => { setCancelando({ motivo: '', enviando: false }); setTercero(null) }}
+                className="text-xs font-bold text-red-700 hover:underline">
+                Cancelar solicitud
+              </button>
+            ) : (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="text-xs font-bold text-red-800 uppercase mb-1">Cancelar solicitud</p>
+                <p className="text-xs text-red-800 mb-2">No se asigna ningún vehículo. La solicitud queda en la pestaña Canceladas con el motivo.</p>
+                <Campo label="Motivo (obligatorio)">
+                  <textarea value={cancelando.motivo} onChange={(e) => setCancelando((c) => ({ ...c, motivo: e.target.value }))} rows={2}
+                    placeholder="Ej.: el cliente ya no necesita el sustituto" className={inputCls} />
+                </Campo>
+                <div className="flex justify-end gap-2 mt-3">
+                  <button onClick={() => setCancelando(null)} disabled={cancelando.enviando} className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700">Volver</button>
+                  <button onClick={cancelar} disabled={cancelando.enviando} className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50">
+                    {cancelando.enviando && <ButtonSpinner />} Confirmar cancelación
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           </>}
         </Modal>
       )}
