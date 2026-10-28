@@ -6,7 +6,7 @@ import { formatDate, formatKM, todayISO } from '../lib/format'
 import { guardarPdf } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto, FOTOS_RECORRIDO } from '../lib/actaChecklist'
-import { numActa, tipoActa, TIPO_ACTA, agruparActas, entregaAbierta } from '../lib/ciclosActas'
+import { numActa, tipoActa, agruparActas, entregaAbierta } from '../lib/ciclosActas'
 import { publicActaUrl, waShareUrl, gmailShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -65,7 +65,9 @@ export default function Actas() {
     return e ? { ...f, acta_entrega_id: e.id, cliente: f.cliente || e.cliente || '', conductor: f.conductor || e.conductor || '' } : { ...f, acta_entrega_id: '' }
   }
   const openCreate = (preset = {}) => {
-    setForm(conCiclo({ ...EMPTY, placa: placas[0] || '', ...preset }))
+    // "Nueva acta" siempre es Entregado al cliente; el recibido solo nace del boton de su entrega, con su placa.
+    const libre = placas.find((p) => !entregaAbierta(actas, p)) || placas[0] || ''
+    setForm(conCiclo({ ...EMPTY, placa: libre, ...preset }))
     setChecklist(emptyChecklist())
     setFotos([]); setFotosRecorrido({}); setFotosNovedad({}); setFirma(null); setExpanded({})
     setCreating(true)
@@ -208,15 +210,22 @@ export default function Actas() {
       )}
 
       {creating && (
-        <Modal title="Nueva acta" onClose={() => setCreating(false)} wide>
+        <Modal title={`Nueva acta: ${tipoActa(form)}`} onClose={() => setCreating(false)} wide>
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Tipo">
-              <select value={form.tipo} onChange={set('tipo')} className={inputCls}>{Object.entries(TIPO_ACTA).map(([valor, nombre]) => <option key={valor} value={valor}>{nombre}</option>)}</select>
+              <p className={`${inputCls} bg-slate-100 text-slate-700 font-bold normal-case`}>{tipoActa(form)}</p>
             </Field>
             <Field label="Placa del vehículo (solo sustitutos registrados)">
-              <select value={form.placa} onChange={set('placa')} className={inputCls}>
-                {placas.map((p) => <option key={p}>{p}</option>)}
-              </select>
+              {form.tipo === 'Recibido' ? (
+                <p className={`${inputCls} bg-slate-100 text-slate-700 font-bold font-mono`}>{form.placa}</p>
+              ) : (
+                <select value={form.placa} onChange={set('placa')} className={inputCls}>
+                  {placas.map((p) => {
+                    const abierta = entregaAbierta(actas, p)
+                    return <option key={p} value={p} disabled={!!abierta}>{abierta ? `${p} — pendiente de recibir` : p}</option>
+                  })}
+                </select>
+              )}
             </Field>
             <AvisoCiclo form={form} abierta={entregaAbierta(actas, form.placa)} />
             <Field label="Cliente"><input value={form.cliente} onChange={set('cliente')} className={inputCls} /></Field>
@@ -391,7 +400,7 @@ function AvisoCiclo({ form, abierta }) {
     return (
       <p className="sm:col-span-2 text-xs rounded-lg px-3 py-2 bg-red-50 text-red-700 border border-red-200">
         Esta placa tiene el acta entregado al cliente <strong>{numActa(abierta)}</strong> del {formatDate(abierta.fecha)} ({abierta.cliente})
-        sin acta recibido por Rentandes. No se puede entregar de nuevo hasta recibirla: cambia el tipo a Recibido por Rentandes.
+        sin acta recibido por Rentandes. No se puede entregar de nuevo hasta recibirla: usa el botón «Crear acta recibido por Rentandes» de la lista.
       </p>
     )
   }
