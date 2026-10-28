@@ -31,9 +31,9 @@ test('todayISO: formato YYYY-MM-DD', () => {
   assert.match(todayISO(), /^\d{4}-\d{2}-\d{2}$/)
 })
 
-test('diasRequeridos: diferencia entre fecha requerida y devolucion estimada', () => {
+test('diasRequeridos: diferencia entre fecha requerida y devolucion estimada, minimo 1', () => {
   assert.equal(diasRequeridos('2026-10-29', '2026-11-12'), 14)
-  assert.equal(diasRequeridos('2026-10-29', '2026-10-29'), 0)
+  assert.equal(diasRequeridos('2026-10-29', '2026-10-29'), 1) // mismo dia = 1
   assert.equal(diasRequeridos('2026-10-29', ''), null)
   assert.equal(diasRequeridos('2026-10-29', '2026-10-20'), null)
 })

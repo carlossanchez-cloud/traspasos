@@ -29,6 +29,12 @@ export default function Solicitudes() {
     if (!form.placa_contrato || !form.ciudad || !form.admin_flota || !form.cliente_empresa) {
       notify('Completa placa, ciudad, administrador y cliente.', 'error'); return
     }
+    if (!form.fecha_inicio || !form.fecha_fin) {
+      notify('La fecha requerida y la fecha estimada de devolución son obligatorias.', 'error'); return
+    }
+    if (form.fecha_fin < form.fecha_inicio) {
+      notify('La fecha estimada de devolución no puede ser antes de la fecha requerida.', 'error'); return
+    }
     setSending(true)
     const { error } = await supabase.from('solicitudes').insert({ ...form, placa_contrato: form.placa_contrato.toUpperCase() })
     setSending(false)
@@ -63,8 +69,8 @@ export default function Solicitudes() {
         </Field>
         <Field label="Administrador de flota"><input value={form.admin_flota} onChange={set('admin_flota')} className={inputCls} /></Field>
         <Field label="Cliente"><input value={form.cliente_empresa} onChange={set('cliente_empresa')} className={inputCls} /></Field>
-        <Field label="Fecha requerida"><input type="date" value={form.fecha_inicio} onChange={set('fecha_inicio')} className={inputCls} /></Field>
-        <Field label="Fecha estimada de devolución"><input type="date" value={form.fecha_fin} onChange={set('fecha_fin')} className={inputCls} /></Field>
+        <Field label="Fecha requerida *"><input type="date" required value={form.fecha_inicio} onChange={set('fecha_inicio')} className={inputCls} /></Field>
+        <Field label="Fecha estimada de devolución *"><input type="date" required min={form.fecha_inicio || undefined} value={form.fecha_fin} onChange={set('fecha_fin')} className={inputCls} /></Field>
         <div className="sm:col-span-2">
           <Field label="Observaciones"><textarea value={form.observaciones} onChange={set('observaciones')} rows={2} className={inputCls} /></Field>
         </div>
