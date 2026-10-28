@@ -6,7 +6,7 @@ import { Icon } from '../lib/icons'
 // mas adelante (por ahora abre una pagina de "proximamente").
 // Gestion de flota es solo para administradores.
 const MODULOS = [
-  { to: '/sustitutos', titulo: 'Sustitutos', icon: 'Car', texto: 'Flota de vehículos sustitutos: mapa, solicitudes, actas de entrega y recibido, e informes.' },
+  { to: '/sustitutos', titulo: 'Sustitutos', icon: 'Car', texto: 'Flota de vehículos sustitutos: mapa, solicitudes, actas (entregado al cliente y recibido por Rentandes) e informes.' },
   { to: '/inventario', titulo: 'Inventario', icon: 'ClipboardList', texto: 'Activos recuperados en venta o recolocación: parte técnica y comercial.' },
   { to: '/gestion-flota', titulo: 'Gestión de flota', icon: 'Wrench', texto: 'Herramientas para los administradores de flota.', proximamente: true, soloAdmin: true },
 ]

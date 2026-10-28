@@ -4,6 +4,11 @@
 
 const entregaDe = (r) => r.acta_entrega_id || r.checklist?.acta_entrega_id || null
 
+// En la base de datos el tipo sigue siendo 'Entrega' o 'Recibido'; en pantalla y en el PDF se nombra por quien
+// queda con el vehiculo, para que no haya duda de cual es cual.
+export const TIPO_ACTA = { Entrega: 'Entregado al cliente', Recibido: 'Recibido por Rentandes' }
+export const tipoActa = (a) => TIPO_ACTA[a?.tipo] || a?.tipo || ''
+
 export const numActa = (a) => (a?.consecutivo != null ? `N.º ${String(a.consecutivo).padStart(4, '0')}` : 'Sin N.º')
 
 const porFechaDesc = (x, y) => (y.created_at || '').localeCompare(x.created_at || '')

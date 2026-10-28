@@ -6,7 +6,7 @@ import { formatDate, formatKM, todayISO } from '../lib/format'
 import { guardarPdf } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto, FOTOS_RECORRIDO } from '../lib/actaChecklist'
-import { numActa, agruparActas, entregaAbierta } from '../lib/ciclosActas'
+import { numActa, tipoActa, TIPO_ACTA, agruparActas, entregaAbierta } from '../lib/ciclosActas'
 import { publicActaUrl, waShareUrl, gmailShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -94,7 +94,7 @@ export default function Actas() {
     if (!form.placa || !form.cliente) { notify('Placa y cliente son obligatorios.', 'error'); return }
     const abierta = entregaAbierta(actas, form.placa)
     if (form.tipo === 'Entrega' && abierta) {
-      notify(`La placa ${form.placa} tiene la entrega ${numActa(abierta)} sin acta de recibido. Primero haz el recibido.`, 'error')
+      notify(`La placa ${form.placa} tiene el acta entregado al cliente ${numActa(abierta)} sin acta recibido por Rentandes. Primero haz el recibido por Rentandes.`, 'error')
       return
     }
     const faltanRecorrido = FOTOS_RECORRIDO.filter((f) => !fotosRecorrido[f.key])
@@ -173,7 +173,7 @@ export default function Actas() {
       setPdfActa({ acta: viewing, vehiculo, entrega: actas.find((a) => a.id === idEntrega) || null, listo })
       await cargado
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-      const tipo = viewing.tipo === 'Entrega' ? 'Entrega' : 'Recibido'
+      const tipo = viewing.tipo === 'Entrega' ? 'Entregado_al_cliente' : 'Recibido_por_Rentandes'
       await guardarPdf(pdfRef.current, `Acta_${tipo}_${viewing.placa}_${numActa(viewing).replace(/\D/g, '') || viewing.fecha}.pdf`)
     } catch (err) {
       notify('No se pudo generar el PDF: ' + err.message, 'error')
@@ -187,8 +187,8 @@ export default function Actas() {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-black text-slate-800">Actas de entrega y recibido</h1>
-          <p className="text-sm text-slate-500">Registro de estado del vehículo al entregar o recibir.</p>
+          <h1 className="text-xl font-black text-slate-800">Actas del vehículo</h1>
+          <p className="text-sm text-slate-500">Entregado al cliente y recibido por Rentandes.</p>
         </div>
         {puedeEditar && (
           <button onClick={() => openCreate()} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg">
@@ -211,7 +211,7 @@ export default function Actas() {
         <Modal title="Nueva acta" onClose={() => setCreating(false)} wide>
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Tipo">
-              <select value={form.tipo} onChange={set('tipo')} className={inputCls}><option>Entrega</option><option>Recibido</option></select>
+              <select value={form.tipo} onChange={set('tipo')} className={inputCls}>{Object.entries(TIPO_ACTA).map(([valor, nombre]) => <option key={valor} value={valor}>{nombre}</option>)}</select>
             </Field>
             <Field label="Placa del vehículo (solo sustitutos registrados)">
               <select value={form.placa} onChange={set('placa')} className={inputCls}>
@@ -322,7 +322,7 @@ export default function Actas() {
       )}
 
       {viewing && (
-        <Modal title={`${numActa(viewing)} — ${viewing.placa} — ${viewing.tipo} — ${formatDate(viewing.fecha)}`} onClose={() => setViewing(null)}>
+        <Modal title={`${numActa(viewing)} — ${viewing.placa} — ${tipoActa(viewing)} — ${formatDate(viewing.fecha)}`} onClose={() => setViewing(null)}>
           <div className="bg-white">
             <div className="flex items-center justify-between mb-1">
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${viewing.bloqueada ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
@@ -390,19 +390,19 @@ function AvisoCiclo({ form, abierta }) {
   if (form.tipo === 'Entrega' && abierta) {
     return (
       <p className="sm:col-span-2 text-xs rounded-lg px-3 py-2 bg-red-50 text-red-700 border border-red-200">
-        Esta placa tiene la entrega <strong>{numActa(abierta)}</strong> del {formatDate(abierta.fecha)} ({abierta.cliente}) sin acta de
-        recibido. No se puede entregar de nuevo hasta recibirla: cambia el tipo a Recibido.
+        Esta placa tiene el acta entregado al cliente <strong>{numActa(abierta)}</strong> del {formatDate(abierta.fecha)} ({abierta.cliente})
+        sin acta recibido por Rentandes. No se puede entregar de nuevo hasta recibirla: cambia el tipo a Recibido por Rentandes.
       </p>
     )
   }
   if (form.tipo === 'Recibido') {
     return abierta ? (
       <p className="sm:col-span-2 text-xs rounded-lg px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200">
-        Este recibido cierra la entrega <strong>{numActa(abierta)}</strong> del {formatDate(abierta.fecha)} ({abierta.cliente}).
+        Esta acta cierra el acta entregado al cliente <strong>{numActa(abierta)}</strong> del {formatDate(abierta.fecha)} ({abierta.cliente}).
       </p>
     ) : (
       <p className="sm:col-span-2 text-xs rounded-lg px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200">
-        Esta placa no tiene una entrega abierta en la app. El recibido quedará sin acta de entrega (vehículo entregado antes de usar la app).
+        Esta placa no tiene un acta entregado al cliente abierta en la app. Esta acta quedará sin ella (vehículo entregado antes de usar la app).
       </p>
     )
   }
@@ -426,7 +426,7 @@ function ListaCiclos({ actas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
     <div>
       <div className="flex flex-wrap gap-2 mb-3">
         {tab('pendientes', 'Pendientes por recibir', pendientes.length)}
-        {tab('completas', 'Entrega y recibido listos', completas.length)}
+        {tab('completas', 'Entregado y recibido', completas.length)}
         {tab('todas', 'Todas', ciclos.length)}
       </div>
       {visibles.length === 0 && <p className="text-sm text-slate-400 py-6 text-center">No hay actas en este grupo.</p>}
@@ -435,7 +435,7 @@ function ListaCiclos({ actas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
           <div key={entrega.id} className={`bg-white border rounded-xl overflow-hidden ${recibido ? 'border-emerald-200' : 'border-amber-200'}`}>
             <div className={`flex items-center justify-between px-4 py-2 text-xs font-bold ${recibido ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
               <span className="font-mono text-sm">{entrega.placa}</span>
-              <span>{recibido ? '✓ Entrega y recibido listos' : 'Pendiente de acta de recibido'}</span>
+              <span>{recibido ? '✓ Entregado y recibido' : 'Pendiente: recibido por Rentandes'}</span>
             </div>
             <FilaActa acta={entrega} onVer={onVer} onEnviar={onEnviar} />
             {recibido ? (
@@ -444,7 +444,7 @@ function ListaCiclos({ actas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
               <div className="border-t border-slate-100 px-4 py-3 flex justify-end">
                 <button onClick={() => onRecibir(entrega)}
                   className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">
-                  + Crear acta de recibido
+                  + Crear acta recibido por Rentandes
                 </button>
               </div>
             )}
@@ -453,7 +453,7 @@ function ListaCiclos({ actas, filtro, setFiltro, onVer, onEnviar, onRecibir }) {
       </div>
       {filtro === 'todas' && sueltas.length > 0 && (
         <div className="mt-6">
-          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Recibidos sin acta de entrega en la app ({sueltas.length})</p>
+          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Recibidos por Rentandes sin acta entregado al cliente en la app ({sueltas.length})</p>
           <div className="flex flex-col gap-2">
             {sueltas.map((r) => (
               <div key={r.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden"><FilaActa acta={r} onVer={onVer} onEnviar={onEnviar} conPlaca /></div>
@@ -470,7 +470,7 @@ function FilaActa({ acta, onVer, onEnviar, conPlaca }) {
     <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <button onClick={() => onVer(acta)} className="text-left flex-1 min-w-0">
         <p className="font-bold text-slate-800 text-sm">
-          <span className="font-mono">{numActa(acta)}</span> · {acta.tipo}{conPlaca ? <> · <span className="font-mono">{acta.placa}</span></> : null} · {acta.cliente}
+          <span className="font-mono">{numActa(acta)}</span> · {tipoActa(acta)}{conPlaca ? <> · <span className="font-mono">{acta.placa}</span></> : null} · {acta.cliente}
         </p>
         <p className="text-xs text-slate-500">{formatDate(acta.fecha)} · {acta.conductor || 'sin conductor registrado'} · {acta.fotos_urls?.length || 0} foto(s)</p>
       </button>
@@ -498,7 +498,7 @@ function FilaActa({ acta, onVer, onEnviar, conPlaca }) {
 // editarlas, y solo agrega su nombre, observaciones, fotos opcionales y su firma.
 function EnviarFirma({ acta, notify }) {
   const url = publicActaUrl(acta.id)
-  const texto = `Acta de ${acta.tipo.toLowerCase()} de ${acta.placa}, por favor revisa y firma:`
+  const texto = `Acta ${tipoActa(acta).toLowerCase()} de ${acta.placa}, por favor revisa y firma:`
   const btn = 'flex-1 text-center text-sm font-bold px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
   return (
     <div>

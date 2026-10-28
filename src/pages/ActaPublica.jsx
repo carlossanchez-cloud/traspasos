@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate, formatKM } from '../lib/format'
 import { useToast } from '../lib/useToast'
-import { numActa } from '../lib/ciclosActas'
+import { numActa, tipoActa } from '../lib/ciclosActas'
 import { TERMINOS, TERMINOS_TITULO, TERMINOS_ENCABEZADO } from '../lib/terminos'
 import Row from '../components/Row'
 import ChecklistView from '../components/ChecklistView'
@@ -108,7 +108,7 @@ export default function ActaPublica() {
     <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
       <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-2xl p-6">
         <img src="/rentandes-logo.png" alt="rentandes" className="h-6 w-auto mb-4" />
-        <h1 className="text-lg font-black text-slate-800">Acta de {acta.tipo.toLowerCase()} — {acta.placa}</h1>
+        <h1 className="text-lg font-black text-slate-800">Acta {tipoActa(acta).toLowerCase()} — {acta.placa}</h1>
         {acta.consecutivo != null && <p className="text-sm font-bold text-slate-600 font-mono">{numActa(acta)}</p>}
         <p className="text-sm text-slate-500 mb-4">{formatDate(acta.fecha)}</p>
 
@@ -208,7 +208,7 @@ export default function ActaPublica() {
       {confirmando && (
         <Modal title="Confirmar envío" onClose={() => !submitting && setConfirmando(false)}>
           <p className="text-sm text-slate-600">
-            Vas a firmar el acta de {acta.tipo.toLowerCase()} de <strong>{acta.placa}</strong> con tu nombre{fotos.length ? ', tus fotos' : ''} y tu firma.
+            Vas a firmar el acta {tipoActa(acta).toLowerCase()} de <strong>{acta.placa}</strong> con tu nombre{fotos.length ? ', tus fotos' : ''} y tu firma.
             Una vez enviada, esta acta queda cerrada y no se puede editar.
           </p>
           <div className="flex justify-end gap-2 mt-5">

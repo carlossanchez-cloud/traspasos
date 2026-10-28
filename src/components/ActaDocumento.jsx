@@ -1,5 +1,5 @@
 import { formatDate, formatKM } from '../lib/format'
-import { numActa } from '../lib/ciclosActas'
+import { numActa, tipoActa } from '../lib/ciclosActas'
 import ChecklistView from './ChecklistView'
 import ActaPhotos from './ActaPhotos'
 
@@ -9,7 +9,7 @@ import ActaPhotos from './ActaPhotos'
 export const ANCHO_DOCUMENTO = 760
 
 export default function ActaDocumento({ acta, vehiculo, entrega, onCargado }) {
-  const titulo = acta.tipo === 'Entrega' ? 'Acta de entrega del vehículo' : 'Acta de recibido del vehículo'
+  const titulo = `Acta: ${tipoActa(acta)}`
   return (
     <div style={{ width: ANCHO_DOCUMENTO }} className="bg-white text-slate-800 px-10 py-9 font-sans">
       <div className="flex items-start justify-between gap-6 pb-5 border-b-2 border-emerald-500" data-corte>
@@ -36,7 +36,7 @@ export default function ActaDocumento({ acta, vehiculo, entrega, onCargado }) {
         <Dato label="Ciudad">{vehiculo?.ciudad}</Dato>
         <Dato label="Kilometraje">{acta.kilometraje ? formatKM(acta.kilometraje) : null}</Dato>
         <Dato label="Combustible">{acta.nivel_combustible}</Dato>
-        {acta.tipo === 'Recibido' && <Dato label="Cierra la entrega">{entrega ? `${numActa(entrega)} del ${formatDate(entrega.fecha)}` : null}</Dato>}
+        {acta.tipo === 'Recibido' && <Dato label="Cierra el acta entregado al cliente">{entrega ? `${numActa(entrega)} del ${formatDate(entrega.fecha)}` : null}</Dato>}
       </div>
 
       <div className="py-5">
