@@ -8,3 +8,8 @@ export const waShareUrl = (url, text) => `https://wa.me/?text=${encodeURICompone
 // p.ej. Outlook). En el celular abre Gmail en el navegador o en la app si esta instalada.
 export const gmailShareUrl = (url, subject, text) =>
   `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(`${text}\n\n${url}`)}`
+
+// Compartir solo texto (sin enlace), p. ej. el resumen de una asignacion.
+export const waTextUrl = (text) => `https://wa.me/?text=${encodeURIComponent(text)}`
+export const gmailTextUrl = (subject, text) =>
+  `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`

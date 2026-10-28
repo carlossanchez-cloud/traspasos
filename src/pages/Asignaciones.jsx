@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { formatDate, diasRequeridos } from '../lib/format'
+import { formatDate, formatKM, diasRequeridos, isExpired } from '../lib/format'
+import { datosVehiculoAsignado, resumenAsignacion } from '../lib/asignaciones'
+import { waTextUrl, gmailTextUrl } from '../lib/shareLink'
 import { useToast } from '../lib/useToast'
 import { avisarSolicitudes } from '../lib/usePendientes'
 import { matchesSolicitud } from '../lib/matching'
@@ -19,6 +21,7 @@ export default function Asignaciones() {
   const [candidatos, setCandidatos] = useState([])
   const [placaElegida, setPlacaElegida] = useState('')
   const [filtro, setFiltro] = useState('pendientes') // pendientes | completadas
+  const [vehiculoActual, setVehiculoActual] = useState(null)
 
   const loadSolicitudes = async () => {
     setLoadingSolicitudes(true)
@@ -32,7 +35,16 @@ export default function Asignaciones() {
     setResolving(s)
     setPlacaElegida('')
     setCandidatos([])
-    if (s.estado !== 'Pendiente') return // completada: solo se consulta
+    setVehiculoActual(null)
+    if (s.estado !== 'Pendiente') {
+      // Completada: solo se consulta. Si no tiene la copia del vehiculo al asignar (paso SQL 27), se traen
+      // los datos actuales del vehiculo.
+      if (!s.vehiculo_al_asignar && s.vehiculo_asignado_placa) {
+        const { data } = await supabase.from('vehicles').select('*').eq('placa', s.vehiculo_asignado_placa).maybeSingle()
+        setVehiculoActual(data)
+      }
+      return
+    }
     // Solo 'estado' se filtra exacto en el servidor (es un enum controlado). ciudad/tipo_vehiculo
     // se comparan en el cliente con matchesSolicitud (case/espacios-insensible): datos reales
     // (seed cargado a mano, ciudades agregadas en momentos distintos) traen inconsistencias de
@@ -137,10 +149,7 @@ export default function Asignaciones() {
           </div>
 
           {resolving.estado !== 'Pendiente' ? (
-            <p className="mt-5 text-sm rounded-lg px-3 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200">
-              <strong>Completada:</strong> se asignó el vehículo <strong className="font-mono">{resolving.vehiculo_asignado_placa || '—'}</strong>
-              {resolving.resuelta_at ? ` el ${formatDate(resolving.resuelta_at.slice(0, 10))}` : ''}.
-            </p>
+            <VehiculoAsignado solicitud={resolving} v={datosVehiculoAsignado(resolving, vehiculoActual)} />
           ) : <>
           <p className="text-xs font-bold text-slate-500 uppercase mt-5 mb-2">Asignar vehículo: {resolving.tipo_vehiculo} disponible en {resolving.ciudad}</p>
           {candidatos.length === 0 ? (
@@ -164,6 +173,51 @@ export default function Asignaciones() {
       )}
 
       <Toast {...toast} onClose={clear} />
+    </div>
+  )
+}
+
+// Vehiculo de una solicitud completada, para compartirlo con el gestor de flota y comparar despues con el
+// acta de entrega.
+function VehiculoAsignado({ solicitud, v }) {
+  const texto = resumenAsignacion(solicitud, v)
+  const btn = 'flex-1 text-center text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+  const vence = (fecha) => (fecha ? <span className={isExpired(fecha) ? 'text-red-600' : ''}>{formatDate(fecha)}{isExpired(fecha) ? ' (vencido)' : ''}</span> : '—')
+  return (
+    <div className="mt-5">
+      <p className="text-xs font-bold text-slate-500 uppercase mb-2">Vehículo asignado</p>
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2">
+        <Row label="Placa" value={<span className="font-mono">{solicitud.vehiculo_asignado_placa || '—'}</span>} />
+        <Row label="Asignado el" value={solicitud.resuelta_at ? formatDate(solicitud.resuelta_at.slice(0, 10)) : '—'} />
+        {v ? (
+          <>
+            <Row label="Vehículo" value={v.modelo || '—'} />
+            <Row label="Tipo" value={v.tipo_vehiculo || '—'} />
+            <Row label="Ciudad" value={v.ciudad || '—'} />
+            <Row label="Kilometraje" value={formatKM(v.km_actual)} />
+            <Row label="Combustible" value={v.nivel_combustible || '—'} />
+            <Row label="SOAT vence" value={vence(v.soat)} />
+            <Row label="Tecnomecánica vence" value={vence(v.rtm)} />
+            <Row label="Seguro" value={v.seguro_activo === false ? 'Sin seguro activo' : (v.aseguradora || 'Activo')} />
+            {v.km_ultimo_mto != null && <Row label="Último mantenimiento" value={formatKM(v.km_ultimo_mto)} />}
+            {v.observaciones && <Row label="Observaciones del vehículo" value={v.observaciones} />}
+          </>
+        ) : (
+          <p className="text-sm text-slate-400 py-2">No se encontraron los datos del vehículo.</p>
+        )}
+      </div>
+      {v && (
+        <p className="text-[11px] text-slate-500 mt-1">
+          {v.alAsignar
+            ? 'Así estaba el vehículo en el momento de asignarlo.'
+            : 'Datos actuales del vehículo: esta asignación se hizo antes de que la app guardara cómo estaba el vehículo al asignarlo.'}
+        </p>
+      )}
+      <p className="text-xs font-bold text-slate-500 uppercase mt-4 mb-2">Compartir con el gestor de flota</p>
+      <div className="flex gap-2">
+        <a href={waTextUrl(texto)} target="_blank" rel="noreferrer" className={btn}>WhatsApp</a>
+        <a href={gmailTextUrl(`Asignación de sustituto ${solicitud.vehiculo_asignado_placa} — ${solicitud.cliente_empresa}`, texto)} target="_blank" rel="noreferrer" className={btn}>Gmail</a>
+      </div>
     </div>
   )
 }
