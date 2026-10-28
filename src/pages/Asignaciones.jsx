@@ -5,6 +5,7 @@ import { useToast } from '../lib/useToast'
 import { avisarSolicitudes } from '../lib/usePendientes'
 import { matchesSolicitud } from '../lib/matching'
 import Modal from '../components/Modal'
+import Row from '../components/Row'
 import Toast from '../components/Toast'
 import Spinner from '../components/Spinner'
 
@@ -72,8 +73,9 @@ export default function Asignaciones() {
                 <div>
                   <p className="font-bold text-slate-800 text-sm">{s.tipo_vehiculo} en {s.ciudad} — {s.cliente_empresa}</p>
                   <p className="text-xs text-slate-500">Solicitado por {s.admin_flota} · sustituye a {s.placa_contrato} · desde {formatDate(s.fecha_inicio)}</p>
+                  {s.observaciones && <p className="text-xs text-slate-500 mt-0.5 truncate max-w-md" title={s.observaciones}>Obs.: {s.observaciones}</p>}
                 </div>
-                <button onClick={() => abrirResolucion(s)} className="text-sm font-bold text-emerald-700 hover:underline shrink-0 ml-3">Asignar</button>
+                <button onClick={() => abrirResolucion(s)} className="shrink-0 ml-3 text-xs font-bold px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Ver y asignar</button>
               </div>
             ))}
           </div>
@@ -81,8 +83,26 @@ export default function Asignaciones() {
       </div>
 
       {resolving && (
-        <Modal title={`Asignar vehículo — ${resolving.cliente_empresa}`} onClose={() => setResolving(null)}>
-          <p className="text-xs text-slate-500 mb-3">{resolving.tipo_vehiculo} disponible en {resolving.ciudad}:</p>
+        <Modal title={`Solicitud — ${resolving.cliente_empresa}`} onClose={() => setResolving(null)}>
+          {/* Primero la solicitud completa, tal como se lleno en Solicitar; abajo, el vehiculo a asignar. */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+            <Row label="Cliente" value={resolving.cliente_empresa} />
+            <Row label="Vehículo que entra a taller" value={<span className="font-mono">{resolving.placa_contrato}</span>} />
+            <Row label="Tipo requerido" value={resolving.tipo_vehiculo} />
+            <Row label="Ciudad" value={resolving.ciudad} />
+            <Row label="Administrador de flota" value={resolving.admin_flota} />
+            <Row label="Fecha requerida" value={formatDate(resolving.fecha_inicio)} />
+            <Row label="Devolución estimada" value={resolving.fecha_fin ? formatDate(resolving.fecha_fin) : 'Sin fecha'} />
+            {resolving.created_at && <Row label="Solicitud enviada" value={formatDate(resolving.created_at.slice(0, 10))} />}
+          </div>
+          <div className="mt-3">
+            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Observaciones</p>
+            <p className={`text-sm whitespace-pre-line rounded-lg px-3 py-2 border ${resolving.observaciones ? 'bg-amber-50 border-amber-200 text-slate-700' : 'bg-white border-slate-200 text-slate-400'}`}>
+              {resolving.observaciones || 'Sin observaciones.'}
+            </p>
+          </div>
+
+          <p className="text-xs font-bold text-slate-500 uppercase mt-5 mb-2">Asignar vehículo: {resolving.tipo_vehiculo} disponible en {resolving.ciudad}</p>
           {candidatos.length === 0 ? (
             <p className="text-sm text-slate-400">No hay vehículos disponibles de ese tipo en esa ciudad ahora.</p>
           ) : (
@@ -96,8 +116,8 @@ export default function Asignaciones() {
               ))}
             </div>
           )}
-          <div className="flex justify-end mt-5">
-            <button onClick={resolver} disabled={!placaElegida} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">Confirmar asignación</button>
+          <div className="flex justify-end mt-4">
+            <button onClick={resolver} disabled={!placaElegida} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50">Confirmar asignación</button>
           </div>
         </Modal>
       )}
