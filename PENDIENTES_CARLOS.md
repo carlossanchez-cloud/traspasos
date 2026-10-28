@@ -23,6 +23,11 @@ select column_name from information_schema.columns where table_name = 'actas' an
 
 Los pasos 19 a 24 ya se corrieron en el preview.
 
+**Limpieza de datos de prueba (una sola vez, solo en el preview, después del 25):**
+`supabase/una_vez/limpieza_datos_prueba.sql`. Deja Disponibles los carros que estaban prestados, marca como
+eliminadas las actas de entrega sin recibido y borra las solicitudes pendientes. Lo pidió Alejo para probar el
+ciclo nuevo desde cero. **No correrlo en producción.** Al final muestra un conteo para confirmar.
+
 **Inventario vacío:** las tablas del paso 23 existen, pero no tienen datos. Falta correr en el preview
 `importar_inventario.sql` (lo tiene Alejo; **no está en el repositorio** porque trae precios y VPN reales; en el
 paquete anterior se llamaba `24_importar_inventario.sql`, que no es el mismo paso 24 del repositorio). Pesa 2 MB:
