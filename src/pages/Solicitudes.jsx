@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
+import { avisarSolicitudes } from '../lib/usePendientes'
 import Toast from '../components/Toast'
 import { ButtonSpinner } from '../components/Spinner'
 
@@ -34,6 +35,7 @@ export default function Solicitudes() {
     if (error) { notify('Error enviando solicitud: ' + error.message, 'error'); return }
     notify(isAdmin ? 'Solicitud enviada. Queda en Asignaciones.' : 'Solicitud enviada. El administrador la revisará pronto.', 'success')
     setForm({ ...EMPTY, ciudad: ciudades[0] || '' })
+    avisarSolicitudes()
   }
 
   return (

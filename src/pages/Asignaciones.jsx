@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate } from '../lib/format'
 import { useToast } from '../lib/useToast'
+import { avisarSolicitudes } from '../lib/usePendientes'
 import { matchesSolicitud } from '../lib/matching'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -48,6 +49,7 @@ export default function Asignaciones() {
     else notify(`${placaElegida} asignado a ${resolving.cliente_empresa}.`, 'success')
     setResolving(null)
     loadSolicitudes()
+    avisarSolicitudes()
   }
 
   const pendientes = solicitudes.filter((s) => s.estado === 'Pendiente')

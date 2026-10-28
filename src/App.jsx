@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-do
 import { AuthProvider, useAuth } from './lib/AuthProvider'
 import { Icon } from './lib/icons'
 import { rolLabel } from './lib/roles'
+import { usePendientes } from './lib/usePendientes'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Mapa from './pages/Mapa'
@@ -26,7 +27,7 @@ const NAV = [
   { to: '/sustitutos', label: 'Flota', icon: 'Car', end: true },
   { to: '/mapa', label: 'Mapa', icon: 'Map' },
   { to: '/solicitudes', label: 'Solicitar', icon: 'ClipboardList' },
-  { to: '/asignaciones', label: 'Asignaciones', icon: 'CheckCircle', soloAdmin: true },
+  { to: '/asignaciones', label: 'Asignaciones', icon: 'CheckCircle', soloAdmin: true, contador: true },
   { to: '/actas', label: 'Actas', icon: 'FileText' },
   { to: '/informes', label: 'Informes', icon: 'Download' },
   { to: '/gastos', label: 'Gastos', icon: 'Fuel' },
@@ -38,6 +39,7 @@ function navClass({ isActive }) {
 
 function Shell({ children }) {
   const { profile, isAdmin, signOut } = useAuth()
+  const pendientes = usePendientes(isAdmin)
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       <nav className="md:w-56 shrink-0 bg-slate-900 text-slate-100 flex md:flex-col justify-between md:sticky md:top-0 md:h-screen md:overflow-y-auto">
@@ -52,6 +54,12 @@ function Shell({ children }) {
           {NAV.filter((item) => !item.soloAdmin || isAdmin).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
               <Icon name={item.icon} className="w-4 h-4" /> {item.label}
+              {item.contador && pendientes > 0 && (
+                <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white text-[11px] font-black flex items-center justify-center"
+                  title={`${pendientes} solicitud(es) pendiente(s) de asignar`}>
+                  {pendientes}
+                </span>
+              )}
             </NavLink>
           ))}
           {isAdmin && (
