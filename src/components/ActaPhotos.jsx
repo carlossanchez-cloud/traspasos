@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import Spinner from './Spinner'
 import { CHECK_ITEMS, FOTOS_RECORRIDO } from '../lib/actaChecklist'
+import { recortarFirma } from '../lib/firma'
 
 // El bucket 'actas' es privado -> las fotos se guardan como PATH, no URL. Para mostrarlas
 // se pide una signed URL de corta duración (1h) justo al abrir la galería, no al listar.
@@ -50,8 +51,8 @@ export default function ActaPhotos({ acta, onCargado, documento = false }) {
       conUrl(fotosDeNovedades(acta.checklist).map((n) => ({ ...n, label: `${n.parte} — ${n.estado}${n.obs ? `: ${n.obs}` : ''}` }))),
       conUrl((acta.fotos_urls || []).filter((p) => !recPaths.has(p)).map((path, i) => ({ path, label: `Foto adicional ${i + 1}` }))),
       conUrl((acta.fotos_urls_cliente || []).map((path, i) => ({ path, label: `Foto del cliente ${i + 1}` }))),
-      firmar(acta.firma_url),
-      firmar(acta.firma_cliente_url),
+      firmar(acta.firma_url).then(recortarFirma),
+      firmar(acta.firma_cliente_url).then(recortarFirma),
     ]).then(([recorrido, novedades, adicionales, cliente, firma, firmaCliente]) => {
       if (!cancelled) setG({ recorrido, novedades, adicionales, cliente, firma, firmaCliente })
     })
@@ -111,7 +112,7 @@ function Firma({ titulo, url, nombre }) {
   return (
     <div data-corte>
       <p className="text-xs font-bold text-slate-500 uppercase mb-2">{titulo}</p>
-      <img src={url} alt={titulo} className="w-full max-h-32 object-contain border border-slate-200 rounded-lg bg-white" />
+      <img src={url} alt={titulo} className="w-full h-32 object-contain p-2 border border-slate-200 rounded-lg bg-white" />
       {nombre && <p className="text-xs text-slate-600 mt-1">{nombre}</p>}
     </div>
   )
