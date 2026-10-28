@@ -7,7 +7,7 @@ import { Icon } from '../lib/icons'
 const MODULOS = [
   { to: '/sustitutos', titulo: 'Sustitutos', icon: 'Car', texto: 'Flota de vehículos sustitutos: mapa, solicitudes, actas (entregado al cliente y recibido por Rentandes) e informes.' },
   { to: '/inventario', titulo: 'Inventario', icon: 'ClipboardList', texto: 'Activos recuperados en venta o recolocación: parte técnica y comercial.' },
-  { to: '/gestion-flota', titulo: 'Gestión de flota', icon: 'Wrench', texto: 'Mantenimiento, kilometraje adicional, costos de repuestos, documentos y rentabilidad por vehículo.', soloAdmin: true },
+  { to: '/gestion-flota', titulo: 'Gestión de flota', icon: 'Wrench', texto: 'Mantenimiento, kilometraje adicional, costos de repuestos, documentos, rentabilidad por vehículo y KPIs.', soloAdmin: true },
 ]
 
 export default function MenuPrincipal() {

@@ -20,4 +20,8 @@ export const SUBMODULOS = [
     to: '/gestion-flota/rentabilidad', icon: 'TrendingUp', titulo: 'Rentabilidad por vehículo', corto: 'Rentabilidad',
     texto: 'Lo que deja cada vehículo: ingresos frente a sus costos.',
   },
+  {
+    to: '/gestion-flota/kpis', icon: 'BarChart', titulo: 'KPIs de flota', corto: 'KPIs',
+    texto: 'Todas las métricas de la flota en un solo lugar, también por gestor de flota.',
+  },
 ]
