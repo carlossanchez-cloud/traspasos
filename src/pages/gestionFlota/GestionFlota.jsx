@@ -13,7 +13,7 @@ function GestionFlotaLayout({ children }) {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-slate-900 text-slate-100">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white">
               <Icon name="Menu" className="w-4 h-4" /> Menú principal
@@ -26,7 +26,7 @@ function GestionFlotaLayout({ children }) {
             {SUBMODULOS.map((m) => <NavLink key={m.to} to={m.to} className={tabCls}>{m.corto}</NavLink>)}
           </nav>
           <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400">
-            <span>{profile?.email} · {rolLabel(profile?.role)}</span>
+            <span className="hidden 2xl:inline">{profile?.email} · {rolLabel(profile?.role)}</span>
             <button onClick={signOut} className="flex items-center gap-1 text-slate-300 hover:text-white"><Icon name="LogOut" className="w-3.5 h-3.5" /> Salir</button>
           </div>
         </div>

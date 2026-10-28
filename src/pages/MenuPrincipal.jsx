@@ -15,8 +15,8 @@ export default function MenuPrincipal() {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-slate-900 text-slate-100">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
-          <img src="/rentandes-logo.png" alt="rentandes" className="h-6 w-auto" />
+        <div className="px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
+          <img src="/rentandes-logo.png" alt="rentandes" className="h-8 sm:h-9 w-auto" />
           <div className="flex items-center gap-3 text-xs text-slate-400 min-w-0">
             <span className="truncate hidden sm:inline">{profile?.email}</span>
             <button onClick={signOut} className="flex items-center gap-1.5 text-slate-300 hover:text-white shrink-0">

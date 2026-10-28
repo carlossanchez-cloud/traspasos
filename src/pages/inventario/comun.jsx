@@ -14,7 +14,7 @@ export function InventarioLayout({ children }) {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-slate-900 text-slate-100">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white">
               <Icon name="Menu" className="w-4 h-4" /> Menú principal
