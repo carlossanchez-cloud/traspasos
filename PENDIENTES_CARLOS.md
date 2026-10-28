@@ -3,7 +3,7 @@
 Cosas de la rama `sandbox/alejo` que necesitan a alguien con acceso a Supabase o a Vercel. Desde la app no se
 pueden hacer.
 
-## 1. Ahora: pasos 25, 26 y 27 en el Supabase del preview
+## 1. Ahora: pasos 25 a 28 en el Supabase del preview
 
 Supabase → SQL Editor → New query → pegar el archivo completo → Run. Se puede volver a correr sin dañar nada.
 
@@ -12,6 +12,7 @@ Supabase → SQL Editor → New query → pegar el archivo completo → Run. Se 
 | 25 | `supabase/steps/25_eliminar_actas.sql` | Eliminar actas incompletas (sin firma del cliente): solo el Administrador general y con motivo obligatorio. No se borran: quedan marcadas como eliminadas (fecha, quién, motivo) y la app las muestra en gris en el filtro Eliminadas. El enlace de firma de un acta eliminada deja de funcionar. Sin este paso, el botón Eliminar avisa que falta. |
 | 26 | `supabase/steps/26_fechas_solicitud_obligatorias.sql` | Las solicitudes de sustituto nuevas deben traer fecha requerida y fecha estimada de devolución (y la devolución no puede ser antes). La app ya lo exige; esto lo asegura en la base de datos. No toca las solicitudes que ya existen. |
 | 27 | `supabase/steps/27_vehiculo_al_asignar.sql` | Al asignar un sustituto se guarda cómo estaba el vehículo en ese momento (kilometraje, combustible, SOAT, tecnomecánica, seguro). Sirve para compartir la asignación con el gestor y comparar después con el acta de entrega. Sin este paso, la app muestra los datos actuales del vehículo. |
+| 28 | `supabase/steps/28_arrendamiento_tercerizado.sql` | Asignar una solicitud por arrendamiento tercerizado cuando no hay vehículo propio disponible en la ciudad: guarda el proveedor y la tarifa diaria. Sin este paso, el botón Confirmar asignación tercerizada avisa que falta. |
 
 Para confirmar que quedó (debe salir 1 fila):
 
@@ -35,7 +36,7 @@ select (select count(*) from inv_activos) as activos, (select count(*) from inv_
 
 1. Revisar y unir el pull request de `sandbox/alejo` a `main`.
 2. En el Supabase de producción (`xsbfohfjqkjwyubzxqbf`) correr, en este orden, los pasos **19, 20, 21, 22, 23,
-   24, 25, 26 y 27** de `supabase/steps/`. Sin ellos, las actas nuevas fallan en producción.
+   24, 25, 26, 27 y 28** de `supabase/steps/`. Sin ellos, las actas nuevas fallan en producción.
 3. Cargar el inventario con `importar_inventario.sql` (lo tiene Alejo; **no está en el repositorio** porque trae
    precios y VPN reales). Una sola vez, después del 23; si ya hay datos se detiene sola.
 4. Revisar que en Supabase → Authentication → URL Configuration esté la URL de producción.
@@ -51,6 +52,7 @@ select (select count(*) from inv_activos) as activos, (select count(*) from inv_
 | 25 | `25_eliminar_actas.sql` | Eliminar actas incompletas con registro (ver arriba). |
 | 26 | `26_fechas_solicitud_obligatorias.sql` | Fechas obligatorias en las solicitudes (ver arriba). |
 | 27 | `27_vehiculo_al_asignar.sql` | Copia del vehículo al asignarlo (ver arriba). |
+| 28 | `28_arrendamiento_tercerizado.sql` | Asignación por arrendamiento tercerizado (ver arriba). |
 
 Para confirmar en producción:
 

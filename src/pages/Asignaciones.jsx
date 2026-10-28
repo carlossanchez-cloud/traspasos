@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate, formatKM, diasRequeridos, isExpired } from '../lib/format'
-import { datosVehiculoAsignado, resumenAsignacion } from '../lib/asignaciones'
+import { datosVehiculoAsignado, resumenAsignacion, costoTercerizado, asignadoA } from '../lib/asignaciones'
+import { formatCOP } from '../lib/inventario'
 import { waTextUrl, gmailTextUrl } from '../lib/shareLink'
 import { useToast } from '../lib/useToast'
 import { avisarSolicitudes } from '../lib/usePendientes'
@@ -25,6 +26,9 @@ export default function Asignaciones() {
   const [placaElegida, setPlacaElegida] = useState('')
   const [filtro, setFiltro] = useState('pendientes') // pendientes | completadas
   const [vehiculoActual, setVehiculoActual] = useState(null)
+  const [cargandoCandidatos, setCargandoCandidatos] = useState(false)
+  const [tercero, setTercero] = useState(null) // { proveedor, tarifa } mientras se llena el arrendamiento tercerizado
+  const [enviando, setEnviando] = useState(false)
 
   const loadSolicitudes = async () => {
     setLoadingSolicitudes(true)
@@ -39,6 +43,7 @@ export default function Asignaciones() {
     setPlacaElegida('')
     setCandidatos([])
     setVehiculoActual(null)
+    setTercero(null)
     if (s.estado !== 'Pendiente') {
       // Completada: solo se consulta. Si no tiene la copia del vehiculo al asignar (paso SQL 27), se traen
       // los datos actuales del vehiculo.
@@ -53,8 +58,10 @@ export default function Asignaciones() {
     // (seed cargado a mano, ciudades agregadas en momentos distintos) traen inconsistencias de
     // mayusculas/espacios que hacian que el .eq() exacto de antes no encontrara vehiculos que
     // en realidad si aplicaban (ver src/lib/matching.js).
+    setCargandoCandidatos(true)
     const { data } = await supabase.from('vehicles').select('*').eq('estado', 'Disponible')
     setCandidatos((data || []).filter((v) => matchesSolicitud(v, s)))
+    setCargandoCandidatos(false)
   }
 
   const resolver = async () => {
@@ -66,6 +73,26 @@ export default function Asignaciones() {
     })
     if (error) notify('Error asignando: ' + error.message, 'error')
     else notify(`${placaElegida} asignado a ${resolving.cliente_empresa}.`, 'success')
+    setResolving(null)
+    loadSolicitudes()
+    avisarSolicitudes()
+  }
+
+  // Sin vehiculo propio disponible en la ciudad: se cierra con un vehiculo de un proveedor externo (paso SQL 28).
+  const resolverTercerizado = async () => {
+    const tarifa = Number(tercero.tarifa)
+    if (!tercero.proveedor.trim() || !(tarifa > 0)) { notify('Escribe el proveedor y la tarifa diaria.', 'error'); return }
+    setEnviando(true)
+    const { error } = await supabase.rpc('resolve_solicitud_tercerizado', {
+      p_solicitud_id: resolving.id, p_proveedor: tercero.proveedor.trim(), p_tarifa_diaria: tarifa,
+    })
+    setEnviando(false)
+    if (error) {
+      const falta = /resolve_solicitud_tercerizado|schema cache|could not find/i.test(error.message)
+      notify(falta ? 'Falta un ajuste en la base de datos (paso SQL 28, pendiente de Carlos).' : 'Error asignando: ' + error.message, 'error')
+      return
+    }
+    notify(`Asignado por arrendamiento tercerizado (${tercero.proveedor.trim()}) a ${resolving.cliente_empresa}.`, 'success')
     setResolving(null)
     loadSolicitudes()
     avisarSolicitudes()
@@ -120,8 +147,9 @@ export default function Asignaciones() {
               <div>
                 <p className="font-bold text-slate-800 text-sm">{s.tipo_vehiculo} en {s.ciudad} — {s.cliente_empresa}</p>
                 <p className="text-xs text-slate-500">Solicitado por {s.admin_flota} · sustituye a {s.placa_contrato} · desde {formatDate(s.fecha_inicio)}</p>
-                <p className="text-xs text-emerald-700 font-bold mt-0.5">
-                  ✓ Asignado <span className="font-mono">{s.vehiculo_asignado_placa || '—'}</span>{s.resuelta_at ? ` el ${formatDate(s.resuelta_at.slice(0, 10))}` : ''}
+                <p className={`text-xs font-bold mt-0.5 ${s.tercerizado ? 'text-indigo-700' : 'text-emerald-700'}`}>
+                  ✓ {s.tercerizado ? asignadoA(s) : <>Asignado <span className="font-mono">{s.vehiculo_asignado_placa || '—'}</span></>}
+                  {s.resuelta_at ? ` · el ${formatDate(s.resuelta_at.slice(0, 10))}` : ''}
                 </p>
               </div>
               <button onClick={() => abrirResolucion(s)} className="shrink-0 ml-3 text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Ver</button>
@@ -155,8 +183,44 @@ export default function Asignaciones() {
             <VehiculoAsignado solicitud={resolving} v={datosVehiculoAsignado(resolving, vehiculoActual)} notify={notify} />
           ) : <>
           <p className="text-xs font-bold text-slate-500 uppercase mt-5 mb-2">Asignar vehículo: {resolving.tipo_vehiculo} disponible en {resolving.ciudad}</p>
-          {candidatos.length === 0 ? (
-            <p className="text-sm text-slate-400">No hay vehículos disponibles de ese tipo en esa ciudad ahora.</p>
+          {cargandoCandidatos ? (
+            <Spinner label="Buscando vehículos disponibles..." className="py-4" />
+          ) : candidatos.length === 0 ? (
+            <div>
+              <p className="text-sm text-slate-500">No hay vehículos disponibles de ese tipo en esa ciudad ahora.</p>
+              {!tercero ? (
+                <button onClick={() => setTercero({ proveedor: '', tarifa: '' })}
+                  className="mt-3 w-full text-sm font-bold px-4 py-2.5 rounded-lg border-2 border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+                  + Arrendamiento tercerizado
+                </button>
+              ) : (
+                <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                  <p className="text-xs font-bold text-indigo-800 uppercase mb-2">Arrendamiento tercerizado</p>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <Campo label="Proveedor">
+                      <input value={tercero.proveedor} onChange={(e) => setTercero((t) => ({ ...t, proveedor: e.target.value }))}
+                        placeholder="Ej.: Localiza, 4WD" className={inputCls} />
+                    </Campo>
+                    <Campo label="Tarifa diaria (COP)">
+                      <input type="number" min="0" step="1000" value={tercero.tarifa} onChange={(e) => setTercero((t) => ({ ...t, tarifa: e.target.value }))}
+                        placeholder="Ej.: 180000" className={inputCls} />
+                    </Campo>
+                  </div>
+                  {costoTercerizado({ ...resolving, tarifa_diaria_tercerizado: tercero.tarifa }) && (
+                    <p className="text-xs text-indigo-800 mt-2">
+                      Costo estimado: <strong>{formatCOP(costoTercerizado({ ...resolving, tarifa_diaria_tercerizado: tercero.tarifa }))}</strong>
+                      {' '}({diasRequeridos(resolving.fecha_inicio, resolving.fecha_fin)} días × {formatCOP(tercero.tarifa)})
+                    </p>
+                  )}
+                  <div className="flex justify-end gap-2 mt-3">
+                    <button onClick={() => setTercero(null)} disabled={enviando} className="text-xs font-bold px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700">Cancelar</button>
+                    <button onClick={resolverTercerizado} disabled={enviando} className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50">
+                      {enviando && <ButtonSpinner />} Confirmar asignación tercerizada
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col gap-2">
               {candidatos.map((v) => (
@@ -168,9 +232,9 @@ export default function Asignaciones() {
               ))}
             </div>
           )}
-          <div className="flex justify-end mt-4">
+          {!cargandoCandidatos && candidatos.length > 0 && <div className="flex justify-end mt-4">
             <button onClick={resolver} disabled={!placaElegida} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg disabled:opacity-50">Confirmar asignación</button>
-          </div>
+          </div>}
           </>}
         </Modal>
       )}
@@ -191,7 +255,7 @@ function VehiculoAsignado({ solicitud, v, notify }) {
     try {
       await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)))
       const fecha = (solicitud.resuelta_at || '').slice(0, 10)
-      await guardarPdf(docRef.current, `Asignacion_${solicitud.vehiculo_asignado_placa}_${solicitud.cliente_empresa}_${fecha}.pdf`.replace(/[^\w.-]+/g, '_'))
+      await guardarPdf(docRef.current, `Asignacion_${solicitud.tercerizado ? `tercerizado_${solicitud.proveedor_tercerizado}` : solicitud.vehiculo_asignado_placa}_${solicitud.cliente_empresa}_${fecha}.pdf`.replace(/[^\w.-]+/g, '_'))
     } catch (err) {
       notify('No se pudo generar el PDF: ' + err.message, 'error')
     } finally {
@@ -202,6 +266,18 @@ function VehiculoAsignado({ solicitud, v, notify }) {
   const vence = (fecha) => (fecha ? <span className={isExpired(fecha) ? 'text-red-600' : ''}>{formatDate(fecha)}{isExpired(fecha) ? ' (vencido)' : ''}</span> : '—')
   return (
     <div className="mt-5">
+      {solicitud.tercerizado ? (
+        <>
+          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Arrendamiento tercerizado</p>
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2">
+            <Row label="Proveedor" value={solicitud.proveedor_tercerizado || '—'} />
+            <Row label="Tarifa diaria" value={formatCOP(solicitud.tarifa_diaria_tercerizado)} />
+            <Row label="Días requeridos" value={diasRequeridos(solicitud.fecha_inicio, solicitud.fecha_fin) ?? '—'} />
+            <Row label="Costo estimado" value={formatCOP(costoTercerizado(solicitud))} />
+            <Row label="Asignado el" value={solicitud.resuelta_at ? formatDate(solicitud.resuelta_at.slice(0, 10)) : '—'} />
+          </div>
+        </>
+      ) : <>
       <p className="text-xs font-bold text-slate-500 uppercase mb-2">Vehículo asignado</p>
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2">
         <Row label="Placa" value={<span className="font-mono">{solicitud.vehiculo_asignado_placa || '—'}</span>} />
@@ -230,10 +306,11 @@ function VehiculoAsignado({ solicitud, v, notify }) {
             : 'Datos actuales del vehículo: esta asignación se hizo antes de que la app guardara cómo estaba el vehículo al asignarlo.'}
         </p>
       )}
+      </>}
       <p className="text-xs font-bold text-slate-500 uppercase mt-4 mb-2">Compartir con el gestor de flota</p>
       <div className="flex gap-2">
         <a href={waTextUrl(texto)} target="_blank" rel="noreferrer" className={btn}>WhatsApp</a>
-        <a href={gmailTextUrl(`Asignación de sustituto ${solicitud.vehiculo_asignado_placa} — ${solicitud.cliente_empresa}`, texto)} target="_blank" rel="noreferrer" className={btn}>Gmail</a>
+        <a href={gmailTextUrl(`Asignación de sustituto ${solicitud.tercerizado ? `tercerizado (${solicitud.proveedor_tercerizado})` : solicitud.vehiculo_asignado_placa} — ${solicitud.cliente_empresa}`, texto)} target="_blank" rel="noreferrer" className={btn}>Gmail</a>
         <button onClick={descargar} disabled={generando} className={`${btn} flex items-center justify-center gap-1.5 disabled:opacity-50`}>
           {generando ? <ButtonSpinner /> : <Icon name="Download" className="w-3.5 h-3.5" />} {generando ? 'Generando...' : 'Descargar PDF'}
         </button>
@@ -247,3 +324,6 @@ function VehiculoAsignado({ solicitud, v, notify }) {
     </div>
   )
 }
+
+function Campo({ label, children }) { return <label className="block text-xs font-bold text-slate-500 uppercase">{label}{children}</label> }
+const inputCls = 'w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm normal-case font-normal text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400'

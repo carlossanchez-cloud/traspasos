@@ -1,4 +1,6 @@
 import { formatDate, formatKM, diasRequeridos, isExpired } from '../lib/format'
+import { formatCOP } from '../lib/inventario'
+import { costoTercerizado } from '../lib/asignaciones'
 
 // Soporte de una asignacion de sustituto, para el PDF: logo, titulo con la placa asignada, la solicitud, las
 // observaciones y el vehiculo asignado tal como estaba al asignarlo (o sus datos actuales, si la asignacion es
@@ -12,8 +14,17 @@ export default function AsignacionDocumento({ solicitud: s, v }) {
         <div>
           <img src="/rentandes-logo.png" alt="rentandes" className="h-9 w-auto mb-4" />
           <p className="text-2xl font-black leading-tight">Asignación de vehículo sustituto</p>
-          <p className="text-3xl font-black font-mono tracking-wide mt-1">{s.vehiculo_asignado_placa || '—'}</p>
-          {v?.modelo && <p className="text-sm text-slate-500 mt-0.5">{v.modelo}</p>}
+          {s.tercerizado ? (
+            <>
+              <p className="text-3xl font-black tracking-wide mt-1">{s.proveedor_tercerizado}</p>
+              <p className="text-sm text-slate-500 mt-0.5">Arrendamiento tercerizado</p>
+            </>
+          ) : (
+            <>
+              <p className="text-3xl font-black font-mono tracking-wide mt-1">{s.vehiculo_asignado_placa || '—'}</p>
+              {v?.modelo && <p className="text-sm text-slate-500 mt-0.5">{v.modelo}</p>}
+            </>
+          )}
         </div>
         <div className="text-right shrink-0">
           <p className="text-[11px] font-bold uppercase text-slate-500">Asignado el</p>
@@ -39,6 +50,13 @@ export default function AsignacionDocumento({ solicitud: s, v }) {
         <p className="text-sm whitespace-pre-line">{s.observaciones || 'Sin observaciones.'}</p>
       </div>
 
+      {s.tercerizado ? (
+        <Seccion titulo="Arrendamiento tercerizado">
+          <Dato label="Proveedor">{s.proveedor_tercerizado}</Dato>
+          <Dato label="Tarifa diaria">{formatCOP(s.tarifa_diaria_tercerizado)}</Dato>
+          <Dato label="Costo estimado">{costoTercerizado(s) ? `${formatCOP(costoTercerizado(s))} (${dias} días)` : null}</Dato>
+        </Seccion>
+      ) : <>
       <Seccion titulo={v?.alAsignar === false ? 'Vehículo asignado (datos actuales)' : 'Vehículo asignado (al momento de asignarlo)'}>
         <Dato label="Placa">{s.vehiculo_asignado_placa}</Dato>
         <Dato label="Vehículo">{v?.modelo}</Dato>
@@ -58,12 +76,14 @@ export default function AsignacionDocumento({ solicitud: s, v }) {
         </div>
       )}
 
+      </>}
+
       <p className="text-xs rounded-lg px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200" data-corte>
         Tener en cuenta pico y placa en la ciudad donde se recoja y entregue el vehículo antes de realizar alguna movilización.
       </p>
 
       <p className="text-[10px] text-slate-400 mt-8 pt-3 border-t border-slate-100" data-corte>
-        Flota Rentandes · Centro de gestión de activos · Asignación {s.vehiculo_asignado_placa} · Documento generado el {formatDate(new Date().toISOString().slice(0, 10))}
+        Flota Rentandes · Centro de gestión de activos · Asignación {s.tercerizado ? `tercerizada (${s.proveedor_tercerizado})` : s.vehiculo_asignado_placa} · Documento generado el {formatDate(new Date().toISOString().slice(0, 10))}
       </p>
     </div>
   )
