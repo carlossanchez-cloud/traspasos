@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { formatDate } from '../lib/format'
+import { formatDate, diasRequeridos } from '../lib/format'
 import { useToast } from '../lib/useToast'
 import { avisarSolicitudes } from '../lib/usePendientes'
 import { matchesSolicitud } from '../lib/matching'
@@ -93,6 +93,7 @@ export default function Asignaciones() {
             <Row label="Administrador de flota" value={resolving.admin_flota} />
             <Row label="Fecha requerida" value={formatDate(resolving.fecha_inicio)} />
             <Row label="Devolución estimada" value={resolving.fecha_fin ? formatDate(resolving.fecha_fin) : 'Sin fecha'} />
+            <Row label="Días requeridos" value={diasRequeridos(resolving.fecha_inicio, resolving.fecha_fin) ?? '—'} />
             {resolving.created_at && <Row label="Solicitud enviada" value={formatDate(resolving.created_at.slice(0, 10))} />}
           </div>
           <div className="mt-3">

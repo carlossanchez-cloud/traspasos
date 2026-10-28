@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { formatDate, formatKM, isExpired, daysDiff, todayISO } from './format.js'
+import { formatDate, formatKM, isExpired, daysDiff, todayISO, diasRequeridos } from './format.js'
 
 test('formatDate: dd/mm/yyyy en español, "-" si vacío', () => {
   assert.equal(formatDate('2026-09-23'), '23/09/2026')
@@ -29,4 +29,11 @@ test('daysDiff: diferencia en días entre dos ISO dates', () => {
 
 test('todayISO: formato YYYY-MM-DD', () => {
   assert.match(todayISO(), /^\d{4}-\d{2}-\d{2}$/)
+})
+
+test('diasRequeridos: diferencia entre fecha requerida y devolucion estimada', () => {
+  assert.equal(diasRequeridos('2026-10-29', '2026-11-12'), 14)
+  assert.equal(diasRequeridos('2026-10-29', '2026-10-29'), 0)
+  assert.equal(diasRequeridos('2026-10-29', ''), null)
+  assert.equal(diasRequeridos('2026-10-29', '2026-10-20'), null)
 })

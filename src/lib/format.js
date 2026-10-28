@@ -27,3 +27,12 @@ export const STATUS_STYLE = {
   Asignado: { dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
   Taller: { dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-200' },
 }
+
+// Dias que se necesita el sustituto: de la fecha requerida a la devolucion estimada (la diferencia entre las
+// dos fechas). null si falta alguna o la devolucion es antes de la salida. Sale de las dos fechas, asi que los
+// informes lo pueden calcular igual sin guardarlo aparte.
+export const diasRequeridos = (inicioISO, finISO) => {
+  if (!inicioISO || !finISO) return null
+  const d = daysDiff(inicioISO, finISO)
+  return d < 0 ? null : d
+}
