@@ -242,7 +242,7 @@ export default function Dashboard() {
                 className={`text-left bg-white border border-slate-300 border-t-4 ${style.top} rounded-2xl overflow-hidden shadow-sm shadow-slate-900/10 hover:shadow-lg hover:border-emerald-500 hover:-translate-y-0.5 transition-all cursor-pointer`}>
                 <div className={`relative bg-gradient-to-b ${style.tint} border-b border-slate-200 flex items-center justify-center px-4 pt-4 pb-2`}>
                   <span className={`absolute top-2 left-2 text-xs font-black uppercase tracking-wide px-2.5 py-1 rounded-lg shadow-sm ${style.solid}`}>{v.estado}</span>
-                  <VehiclePhoto vehicle={v} className="w-full h-20" />
+                  <VehiclePhoto vehicle={v} className="w-full h-20" soloRender />
                 </div>
                 <div className="p-4">
                 <div className="flex items-start justify-between">
