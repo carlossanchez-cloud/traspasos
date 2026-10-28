@@ -1,125 +1,201 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { STATUS_STYLE } from '../lib/format'
-import { formatCOP } from '../lib/inventario'
 import { GASTOS, GASTOS_FUENTE, totalMes, totalDia, depreciacionMes } from '../lib/gastosSustitutos'
 import Spinner from '../components/Spinner'
 
-// Gastos mensuales de cada sustituto. La lista de vehiculos sale de la flota (base de datos); los gastos, del
-// Excel de rentabilidad pegado en src/lib/gastosSustitutos.js. Solo consulta: no se editan desde la app.
+// Gastos mensuales de cada sustituto, en tabla como el Excel. La lista de vehiculos sale de la flota (base de
+// datos); los gastos, del Excel de rentabilidad pegado en src/lib/gastosSustitutos.js. Solo consulta.
 
-const COLUMNAS = [
-  ['valor_activo', 'Valor activo (Fasecolda)'], ['poliza', 'Póliza'], ['soat', 'SOAT'], ['rtm', 'RTM'],
-  ['impuesto', 'Impuesto'], ['parqueadero', 'Parqueadero'], ['mtto', 'Mantenimiento (proy. anual / 12)'],
-  ['otros', 'Otros gastos'], ['movilizaciones', 'Movilizaciones'],
+const num = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
+const pesos = (v) => (v == null ? '—' : num.format(v))
+
+// Columnas de gasto, en el orden del Excel. Solo se ven en pantallas anchas (xl); en las demas van en el
+// detalle que se abre al tocar la fila. Total mes y dia van primero, despues de la referencia: es lo que se busca.
+const COLS = [
+  ['poliza', 'Póliza', (g) => g.poliza],
+  ['soat', 'SOAT', (g) => g.soat],
+  ['rtm', 'RTM', (g) => g.rtm],
+  ['impuesto', 'Impuesto', (g) => g.impuesto],
+  ['parqueadero', 'Parq.', (g) => g.parqueadero],
+  ['mtto', 'Mtto.', (g) => (g.mtto_anual == null ? null : g.mtto_anual / 12)], // proyeccion anual / 12
+  ['otros', 'Otros', (g) => g.otros],
 ]
-const valor = (g, k) => (k === 'mtto' ? (g.mtto_anual == null ? null : g.mtto_anual / 12) : g[k])
+
+// "COLORADO LS 2023 MT DIESEL 2776 CC ..." -> "COLORADO LS 2023": hasta el año, que es lo que se reconoce.
+const referencia = (linea) => {
+  if (!linea) return null
+  const m = linea.match(/^(.*?\b(19|20)\d{2})\b/)
+  return (m ? m[1] : linea.split(' ').slice(0, 3).join(' ')).trim()
+}
 
 export default function Gastos() {
   const [vehiculos, setVehiculos] = useState(null)
   const [q, setQ] = useState('')
-  const [orden, setOrden] = useState('total')
+  const [ciudad, setCiudad] = useState('')
+  const [orden, setOrden] = useState({ col: 'total', desc: true })
+  const [abierta, setAbierta] = useState(null)
+  const [verFuera, setVerFuera] = useState(false)
   useEffect(() => {
     supabase.from('vehicles').select('placa, modelo, estado, ciudad').order('placa').then(({ data }) => setVehiculos(data || []))
   }, [])
 
-  const { filas, fueraDeFlota } = useMemo(() => {
+  const { filas, fueraDeFlota, ciudades } = useMemo(() => {
     const porPlaca = new Map(GASTOS.map((g) => [g.placa, g]))
     const enFlota = new Set((vehiculos || []).map((v) => v.placa))
     const qq = q.trim().toLowerCase()
-    const coincide = (x) => !qq || [x.placa, x.modelo, x.linea, x.ciudad].some((v) => String(v || '').toLowerCase().includes(qq))
-    const clave = { total: (f) => (f.g ? totalMes(f.g) : -1), placa: null, valor: (f) => f.g?.valor_activo ?? -1 }[orden]
-    const lista = (vehiculos || []).map((v) => ({ ...v, g: porPlaca.get(v.placa) || null })).filter((f) => coincide({ ...f, linea: f.g?.linea }))
-    if (clave) lista.sort((a, b) => clave(b) - clave(a))
-    return { filas: lista, fueraDeFlota: GASTOS.filter((g) => !enFlota.has(g.placa) && coincide(g)) }
-  }, [vehiculos, q, orden])
+    const todas = (vehiculos || []).map((v) => ({ ...v, g: porPlaca.get(v.placa) || null }))
+    const lista = todas.filter((f) => (!ciudad || f.ciudad === ciudad)
+      && (!qq || [f.placa, f.ciudad, f.g?.linea, f.modelo].some((x) => String(x || '').toLowerCase().includes(qq))))
+    const clave = (f) => {
+      if (orden.col === 'placa') return f.placa
+      if (orden.col === 'ciudad') return f.ciudad || ''
+      if (!f.g) return -1
+      if (orden.col === 'total') return totalMes(f.g)
+      return COLS.find(([k]) => k === orden.col)[2](f.g) ?? -1
+    }
+    lista.sort((a, b) => {
+      const x = clave(a), y = clave(b)
+      const c = typeof x === 'string' ? x.localeCompare(y) : x - y
+      return orden.desc ? -c : c
+    })
+    return {
+      filas: lista,
+      fueraDeFlota: GASTOS.filter((g) => !enFlota.has(g.placa)),
+      ciudades: [...new Set(todas.map((f) => f.ciudad).filter(Boolean))].sort(),
+    }
+  }, [vehiculos, q, ciudad, orden])
 
   if (!vehiculos) return <Spinner label="Cargando flota..." />
   const conGastos = filas.filter((f) => f.g)
-  const sumaMes = conGastos.reduce((s, f) => s + totalMes(f.g), 0)
+  const suma = (fn) => conGastos.reduce((s, f) => s + (fn(f.g) || 0), 0)
+  const sumaMes = suma(totalMes)
+  const ordenar = (col) => setOrden((o) => ({ col, desc: o.col === col ? !o.desc : col !== 'placa' && col !== 'ciudad' }))
+
+  const th = 'px-2 py-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap select-none cursor-pointer hover:text-slate-800'
+  const flecha = (col) => (orden.col === col ? (orden.desc ? ' ↓' : ' ↑') : '')
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <h1 className="text-xl font-black text-slate-800">Gastos de la flota de sustitutos</h1>
-      <p className="text-sm text-slate-500 mb-5">Gasto mensual de cada vehículo según <strong>{GASTOS_FUENTE}</strong>. Solo consulta: para actualizarlo se carga el Excel nuevo.</p>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <Kpi label="Vehículos en la flota" valor={filas.length} ayuda={`${conGastos.length} con gastos en el Excel`} />
-        <Kpi label="Gasto total mes" valor={formatCOP(sumaMes)} />
-        <Kpi label="Gasto total día" valor={formatCOP(sumaMes / 30)} />
-        <Kpi label="Gasto promedio por vehículo" valor={formatCOP(conGastos.length ? sumaMes / conGastos.length : null)} ayuda="al mes" />
+    <div className="max-w-7xl mx-auto">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-xl font-black text-slate-800">Gastos de la flota</h1>
+          <p className="text-sm text-slate-500">Gasto mensual por vehículo, en pesos. Fuente: {GASTOS_FUENTE}.</p>
+        </div>
+        <div className="flex gap-2 text-sm">
+          <Resumen label="Total mes" valor={`$ ${pesos(sumaMes)}`} fuerte />
+          <Resumen label="Total día" valor={`$ ${pesos(sumaMes / 30)}`} />
+          <Resumen label="Vehículos" valor={`${conGastos.length} / ${filas.length}`} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar placa, línea o ciudad…"
-          className="flex-1 min-w-48 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" />
-        <select value={orden} onChange={(e) => setOrden(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
-          <option value="total">Mayor gasto al mes</option><option value="valor">Mayor valor del activo</option><option value="placa">Placa</option>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar placa o referencia…"
+          className="flex-1 min-w-40 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" />
+        <select value={ciudad} onChange={(e) => setCiudad(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
+          <option value="">Todas las ciudades</option>
+          {ciudades.map((c) => <option key={c}>{c}</option>)}
         </select>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {filas.map((f) => <Fila key={f.placa} f={f} />)}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+        <table className="w-full text-[13px] tabular-nums">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th onClick={() => ordenar('placa')} className={`${th} text-left`}>Placa{flecha('placa')}</th>
+              <th onClick={() => ordenar('ciudad')} className={`${th} text-left`}>Ciudad{flecha('ciudad')}</th>
+              <th className={`${th} text-left cursor-default hover:text-slate-500 hidden md:table-cell`}>Referencia</th>
+              <th onClick={() => ordenar('total')} className={`${th} text-right text-slate-800 bg-emerald-50`}>Total mes{flecha('total')}</th>
+              <th className={`${th} text-right cursor-default hover:text-slate-500 hidden sm:table-cell border-r border-slate-200`}>Día</th>
+              {COLS.map(([k, l]) => <th key={k} onClick={() => ordenar(k)} title={k === 'mtto' ? 'Mantenimiento: proyección anual ÷ 12' : k === 'parqueadero' ? 'Parqueadero' : undefined} className={`${th} text-right hidden xl:table-cell`}>{l}{flecha(k)}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => {
+              const g = f.g
+              const estilo = STATUS_STYLE[f.estado]
+              const abiertaEsta = abierta === f.placa
+              return (
+                <Fragment key={f.placa}>
+                  <tr onClick={() => g && setAbierta(abiertaEsta ? null : f.placa)}
+                    className={`border-b border-slate-100 ${g ? 'cursor-pointer hover:bg-slate-50 xl:cursor-default xl:hover:bg-transparent' : 'text-slate-400'}`}>
+                    <td className="px-2 py-2.5 font-mono font-bold text-slate-800 whitespace-nowrap">
+                      {estilo && <span className={`inline-block w-2 h-2 rounded-full mr-2 align-middle ${estilo.dot}`} title={f.estado} />}{f.placa}
+                    </td>
+                    <td className="px-2 py-2.5 text-slate-600 whitespace-nowrap">{f.ciudad || '—'}</td>
+                    <td className="px-2 py-2.5 text-slate-600 hidden md:table-cell max-w-56 truncate" title={g?.linea}>{referencia(g?.linea) || f.modelo || '—'}</td>
+                    <td className="px-2 py-2.5 text-right font-bold text-slate-900 bg-emerald-50/50 whitespace-nowrap">
+                      {g ? pesos(totalMes(g)) : <span className="text-xs font-normal text-amber-700">Sin datos</span>}
+                    </td>
+                    <td className="px-2 py-2.5 text-right text-slate-600 hidden sm:table-cell border-r border-slate-200">{g ? pesos(totalDia(g)) : ''}</td>
+                    {COLS.map(([k, , fn]) => <td key={k} className="px-2 py-2.5 text-right text-slate-500 hidden xl:table-cell">{g ? pesos(fn(g)) : ''}</td>)}
+                  </tr>
+                  {abiertaEsta && g && (
+                    <tr className="xl:hidden bg-slate-50 border-b border-slate-200">
+                      <td colSpan={12} className="px-3 py-3">
+                        <p className="text-xs text-slate-500 mb-2 md:hidden">{referencia(g.linea)}</p>
+                        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-xs">
+                          {COLS.map(([k, l, fn]) => (
+                            <div key={k} className="flex justify-between gap-2"><dt className="text-slate-500">{l}</dt><dd className="font-semibold text-slate-800">{pesos(fn(g))}</dd></div>
+                          ))}
+                          <div className="flex justify-between gap-2 sm:hidden"><dt className="text-slate-500">Total día</dt><dd className="font-semibold text-slate-800">{pesos(totalDia(g))}</dd></div>
+                        </dl>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            })}
+          </tbody>
+          <tfoot className="bg-slate-50 border-t-2 border-slate-200 font-bold text-slate-800">
+            <tr>
+              <td className="px-2 py-2.5" colSpan={2}>Total ({conGastos.length})</td>
+              <td className="hidden md:table-cell" />
+              <td className="px-2 py-2.5 text-right bg-emerald-100/60 whitespace-nowrap">{pesos(sumaMes)}</td>
+              <td className="px-2 py-2.5 text-right hidden sm:table-cell border-r border-slate-200">{pesos(sumaMes / 30)}</td>
+              {COLS.map(([k, , fn]) => <td key={k} className="px-2 py-2.5 text-right hidden xl:table-cell">{pesos(suma(fn))}</td>)}
+            </tr>
+          </tfoot>
+        </table>
       </div>
+      <p className="text-[11px] text-slate-400 mt-2 xl:hidden">Toca una fila para ver el detalle de sus gastos.</p>
 
       {fueraDeFlota.length > 0 && (
-        <div className="mt-8">
-          <p className="text-xs font-bold text-slate-500 uppercase">En el Excel pero no en la flota de la app ({fueraDeFlota.length})</p>
-          <p className="text-xs text-slate-400 mb-2">Placas con gastos en el Excel que no están registradas como sustitutos en la app.</p>
-          <div className="flex flex-col gap-2">
-            {fueraDeFlota.map((g) => <Fila key={g.placa} f={{ placa: g.placa, g }} />)}
-          </div>
+        <div className="mt-6">
+          <button onClick={() => setVerFuera((v) => !v)} className="text-xs font-bold text-slate-600 hover:text-slate-900">
+            {verFuera ? '▲' : '▼'} {fueraDeFlota.length} placa(s) del Excel que no están en la flota de la app
+          </button>
+          {verFuera && (
+            <div className="mt-2 bg-white border border-slate-200 rounded-xl overflow-x-auto">
+              <table className="w-full text-[13px] tabular-nums">
+                <tbody>
+                  {fueraDeFlota.map((g) => (
+                    <tr key={g.placa} className="border-b border-slate-100 last:border-0">
+                      <td className="px-3 py-2 font-mono font-bold text-slate-700">{g.placa}</td>
+                      <td className="px-3 py-2 text-slate-600">{referencia(g.linea)}</td>
+                      <td className="px-3 py-2 text-right font-bold text-slate-800">{pesos(totalMes(g))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
+
       <p className="text-[11px] text-slate-400 mt-6">
-        Total mes = póliza + SOAT + RTM + impuesto + parqueadero + otros gastos + mantenimiento (proyección anual / 12), igual que el
-        Excel. La depreciación (0,5 % mensual del valor) y las movilizaciones no suman en el total del Excel; se muestran aparte.
+        Total mes = póliza + SOAT + RTM + impuesto + parqueadero + mantenimiento (proyección anual ÷ 12) + otros, igual que el Excel.
+        No incluye la depreciación (0,5 % mensual del valor del activo; para toda la flota serían $ {pesos(suma(depreciacionMes))} al mes) ni las movilizaciones.
       </p>
     </div>
   )
 }
 
-function Fila({ f }) {
-  const [abierto, setAbierto] = useState(false)
-  const { g } = f
-  const estilo = STATUS_STYLE[f.estado]
+function Resumen({ label, valor, fuerte }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-      <button onClick={() => g && setAbierto((a) => !a)} disabled={!g}
-        className="w-full text-left px-4 py-3 grid grid-cols-[1fr_auto] sm:grid-cols-[6.5rem_1fr_9rem_9rem_1.5rem] gap-x-3 gap-y-1 items-center disabled:cursor-default">
-        <span className="font-mono font-bold text-slate-800 flex items-center gap-2">
-          {estilo && <span className={`w-2 h-2 rounded-full ${estilo.dot}`} title={f.estado} />}{f.placa}
-        </span>
-        <span className="order-first sm:order-none col-span-2 sm:col-span-1 text-sm text-slate-600 truncate">{g?.linea || f.modelo || '—'}{f.ciudad ? <span className="text-slate-400"> · {f.ciudad}</span> : null}</span>
-        {g ? (
-          <>
-            <span className="text-right sm:text-right"><span className="block text-[10px] font-bold text-slate-400 uppercase">Mes</span><span className="text-sm font-bold text-slate-800">{formatCOP(totalMes(g))}</span></span>
-            <span className="text-right hidden sm:block"><span className="block text-[10px] font-bold text-slate-400 uppercase">Día</span><span className="text-sm text-slate-700">{formatCOP(totalDia(g))}</span></span>
-            <span className={`hidden sm:block text-slate-400 text-xs transition-transform ${abierto ? 'rotate-180' : ''}`}>▼</span>
-          </>
-        ) : (
-          <span className="sm:col-span-3 text-right text-xs text-amber-700">Sin gastos en el Excel</span>
-        )}
-      </button>
-      {abierto && g && (
-        <div className="border-t border-slate-100 bg-slate-50 px-4 py-3 grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-2">
-          {COLUMNAS.map(([k, l]) => (
-            <div key={k}><p className="text-[10px] font-bold text-slate-400 uppercase leading-tight">{l}</p><p className="text-sm text-slate-800">{formatCOP(valor(g, k))}</p></div>
-          ))}
-          <div><p className="text-[10px] font-bold text-slate-400 uppercase leading-tight">Depreciación mes (no suma)</p><p className="text-sm text-slate-800">{formatCOP(depreciacionMes(g))}</p></div>
-          <div className="col-span-2 sm:col-span-5"><p className="text-[10px] font-bold text-slate-400 uppercase">Línea (Excel)</p><p className="text-xs text-slate-600">{g.linea}</p></div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Kpi({ label, valor, ayuda }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4">
-      <p className="text-[11px] font-bold text-slate-500 uppercase">{label}</p>
-      <p className="text-xl font-black text-slate-800 mt-1">{valor}</p>
-      {ayuda && <p className="text-[11px] text-slate-400 mt-0.5">{ayuda}</p>}
+    <div className={`rounded-lg border px-3 py-1.5 ${fuerte ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}`}>
+      <p className="text-[10px] font-bold uppercase text-slate-500">{label}</p>
+      <p className={`font-black ${fuerte ? 'text-emerald-800' : 'text-slate-800'}`}>{valor}</p>
     </div>
   )
 }
