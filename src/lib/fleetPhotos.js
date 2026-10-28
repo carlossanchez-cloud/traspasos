@@ -8,7 +8,8 @@ import jacT8 from '../assets/vehicles/fleet/jac-t8.png'
 import kangoo from '../assets/vehicles/fleet/kangoo.png'
 import oroch from '../assets/vehicles/fleet/oroch.png'
 
-// Render real por placa para los 24 vehículos del seed original (mismo modelo real =
+// Render real por placa para los 24 vehículos del seed original (captiva.png: la Captiva que se vende en
+// Colombia, recortada de la foto que mandó Alejo) (mismo modelo real =
 // misma imagen, para no pagar generaciones repetidas de un carro pixel-idéntico).
 // Vehículo nuevo que no esté aquí simplemente no tiene entrada — VehiclePhoto cae al
 // ícono genérico por tipo.
