@@ -13,14 +13,14 @@ function escapeHtml(str) {
 }
 
 function cityIcon(stats) {
-  const total = stats.Disponible + stats.Asignado + stats.Taller
+  const total = stats.Disponible + stats.Asignado + stats.Taller + stats.EnProceso
   const html = `
     <div style="display:flex;flex-direction:column;align-items:center;width:85px;">
       <div style="background:#fff;border-radius:12px;box-shadow:0 10px 15px -3px rgb(0 0 0 / .15);border:1px solid #e2e8f0;padding:6px;display:flex;flex-direction:column;align-items:center;width:100%;">
         <div style="font-weight:700;font-size:10px;color:#1e293b;margin-bottom:4px;">${escapeHtml(stats.city)}</div>
         <div style="display:flex;gap:4px;">
           <span style="width:20px;height:20px;border-radius:6px;background:#e6fbf5;color:#00936c;border:1px solid #8cecd0;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Disponible}</span>
-          <span style="width:20px;height:20px;border-radius:6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Asignado}</span>
+          <span style="width:20px;height:20px;border-radius:6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Asignado + stats.EnProceso}</span>
           <span style="width:20px;height:20px;border-radius:6px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:900;">${stats.Taller}</span>
         </div>
       </div>
@@ -59,8 +59,10 @@ export default function Mapa() {
     vehicles.forEach((v) => {
       if (!v.ciudad) return
       const city = titleCase(v.ciudad)
-      if (!stats[city]) stats[city] = { city, Disponible: 0, Asignado: 0, Taller: 0, vehiculos: [] }
-      if (stats[city][v.estado] !== undefined) stats[city][v.estado]++
+      if (!stats[city]) stats[city] = { city, Disponible: 0, Asignado: 0, Taller: 0, EnProceso: 0, vehiculos: [] }
+      // Los que estan en proceso de entrega o de recepcion cuentan con los asignados (estan con el cliente).
+      if (v.estado.startsWith('En proceso')) stats[city].EnProceso++
+      else if (stats[city][v.estado] !== undefined) stats[city][v.estado]++
       stats[city].vehiculos.push(v)
     })
     return Object.values(stats)

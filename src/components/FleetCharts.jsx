@@ -1,10 +1,11 @@
 import { STATUS_STYLE } from '../lib/format'
+import { ESTADOS_VEHICULO } from '../lib/recepcion'
 
 // Barra de estado: un solo bloque apilado (3 estados posibles, encoding de status
 // no categórico) — colores ya usados en toda la app (badges, stat cards), sin
 // inventar una paleta nueva. Gap de 2px entre segmentos (contraste sobre blanco).
-const ESTADO_FILL = { Disponible: 'bg-emerald-500', Asignado: 'bg-blue-500', Taller: 'bg-red-500' }
-const ESTADOS = ['Disponible', 'Asignado', 'Taller']
+const ESTADO_FILL = Object.fromEntries(Object.entries(STATUS_STYLE).map(([estado, s]) => [estado, s.dot]))
+const ESTADOS = ESTADOS_VEHICULO
 
 function EstadoBar({ vehicles }) {
   const total = vehicles.length || 1

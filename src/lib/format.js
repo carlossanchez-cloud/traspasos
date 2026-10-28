@@ -24,7 +24,9 @@ export const daysDiff = (fromISO, toISO = todayISO()) => {
 
 export const STATUS_STYLE = {
   Disponible: { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  'En proceso de entrega': { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
   Asignado: { dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  'En proceso de recepción': { dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
   Taller: { dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-200' },
 }
 

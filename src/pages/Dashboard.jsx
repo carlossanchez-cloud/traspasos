@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { actasDeAsignacion } from '../lib/ciclosActas'
+import { ESTADOS_VEHICULO } from '../lib/recepcion'
+import RevisarRecepcion from '../components/RevisarRecepcion'
 import { Icon } from '../lib/icons'
 import { formatDate, formatKM, daysDiff, STATUS_STYLE, todayISO } from '../lib/format'
 import { useToast } from '../lib/useToast'
@@ -58,6 +60,7 @@ export default function Dashboard() {
 
   const [vehicles, setVehicles] = useState([])
   const [actas, setActas] = useState([]) // para el control de actas de los asignados
+  const [revisando, setRevisando] = useState(null) // vehiculo en proceso de recepcion que revisa el admin
   const [ciudades, setCiudades] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -104,6 +107,7 @@ export default function Dashboard() {
     total: vehicles.length,
     disponibles: vehicles.filter((v) => v.estado === 'Disponible').length,
     asignados: vehicles.filter((v) => v.estado === 'Asignado').length,
+    enProceso: vehicles.filter((v) => v.estado.startsWith('En proceso')).length,
     taller: vehicles.filter((v) => v.estado === 'Taller').length,
   }), [vehicles])
 
@@ -177,9 +181,10 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <StatCard label="Total flota" value={stats.total} tone="text-slate-800" bar="bg-slate-300" icon="Car" />
         <StatCard label="Disponibles" value={stats.disponibles} tone="text-emerald-600" bar="bg-emerald-500" icon="CheckCircle" />
+        <StatCard label="En proceso" value={stats.enProceso} tone="text-amber-600" bar="bg-amber-500" icon="ClipboardList" />
         <StatCard label="Asignados" value={stats.asignados} tone="text-blue-600" bar="bg-blue-500" icon="User" />
         <StatCard label="En taller" value={stats.taller} tone="text-red-600" bar="bg-red-500" icon="Wrench" />
       </div>
@@ -198,9 +203,7 @@ export default function Dashboard() {
         </select>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm">
           <option>Todos</option>
-          <option>Disponible</option>
-          <option>Asignado</option>
-          <option>Taller</option>
+          {ESTADOS_VEHICULO.map((e) => <option key={e}>{e}</option>)}
         </select>
       </div>
 
@@ -219,7 +222,7 @@ export default function Dashboard() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((v) => {
-            const style = STATUS_STYLE[v.estado]
+            const style = STATUS_STYLE[v.estado] || STATUS_STYLE.Disponible
             const diasEnEstado = daysDiff(v.fecha_estado || todayISO())
             const diasPrestado = v.estado === 'Asignado' ? daysDiff(v.fecha_inicio || todayISO()) : 0
             const diasRestantes = v.estado === 'Asignado' ? daysDiff(todayISO(), v.fecha_fin || todayISO()) : 0
@@ -254,6 +257,26 @@ export default function Dashboard() {
                     <ControlActas hechas={actasDeAsignacion(v, actas)} />
                   </>
                 )}
+                {v.estado === 'En proceso de entrega' && (
+                  <>
+                    <div className="mt-1 text-xs text-slate-500 font-medium">{v.cliente || 'Cliente sin nombre'}</div>
+                    <p className="mt-2 text-xs text-amber-700">Esperando el acta de entrega firmada por el cliente.</p>
+                    <ControlActas hechas={actasDeAsignacion(v, actas)} />
+                  </>
+                )}
+                {v.estado === 'En proceso de recepción' && (
+                  <>
+                    <div className="mt-1 text-xs text-slate-500 font-medium">{v.cliente || 'Cliente sin nombre'}</div>
+                    <p className="mt-2 text-xs text-violet-700">Recibido. Falta que el administrador revise las actas.</p>
+                    <ControlActas hechas={actasDeAsignacion(v, actas)} />
+                    {isAdmin && (
+                      <button onClick={(e) => { e.stopPropagation(); setRevisando(v) }}
+                        className="mt-3 w-full text-xs font-bold px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white">
+                        Revisar recepción
+                      </button>
+                    )}
+                  </>
+                )}
                 {v.estado === 'Disponible' && (
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-700">
                     <Icon name="CheckCircle" className="w-3.5 h-3.5" />
@@ -277,6 +300,11 @@ export default function Dashboard() {
             )
           })}
         </div>
+      )}
+
+      {revisando && (
+        <RevisarRecepcion vehiculo={revisando} actas={actas} notify={notify}
+          onClose={() => setRevisando(null)} onListo={() => { setRevisando(null); load() }} />
       )}
 
       {(isAdding || isEditing) && (
@@ -392,7 +420,7 @@ function VehicleForm({ form, setForm, ciudades, readOnly }) {
       </Field>
       <Field label="Estado">
         <select disabled={readOnly} value={form.estado} onChange={set('estado')} className={inputCls}>
-          <option>Disponible</option><option>Asignado</option><option>Taller</option>
+          {ESTADOS_VEHICULO.map((e) => <option key={e}>{e}</option>)}
         </select>
       </Field>
       {form.estado === 'Asignado' && (
