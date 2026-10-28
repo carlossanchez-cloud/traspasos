@@ -41,7 +41,7 @@ function Shell({ children }) {
       <nav className="md:w-56 shrink-0 bg-slate-900 text-slate-100 flex md:flex-col justify-between md:sticky md:top-0 md:h-screen md:overflow-y-auto">
         <div className="flex md:flex-col overflow-x-auto md:overflow-visible">
           <div className="hidden md:block px-4 py-5">
-            <img src="/rentandes-logo.png" alt="rentandes" className="h-6 w-auto mb-1.5" />
+            <img src="/rentandes-logo-blanco.png" alt="rentandes" className="h-6 w-auto mb-1.5" />
             <p className="text-xs text-slate-400">Flota Sustitutos</p>
           </div>
           <NavLink to="/" end className={navClass}>
