@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
 import { formatDate, formatKM, todayISO } from '../lib/format'
-import { pdfOrientation, waitForImages } from '../lib/pdf'
+import { guardarPdf } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto, FOTOS_RECORRIDO } from '../lib/actaChecklist'
 import { numActa, agruparActas, entregaAbierta } from '../lib/ciclosActas'
@@ -14,6 +14,7 @@ import Row from '../components/Row'
 import SignaturePad from '../components/SignaturePad'
 import ActaPhotos from '../components/ActaPhotos'
 import ChecklistView from '../components/ChecklistView'
+import ActaDocumento from '../components/ActaDocumento'
 import PhotoPicker from '../components/PhotoPicker'
 import FotoRecorrido from '../components/FotoRecorrido'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
@@ -41,7 +42,7 @@ export default function Actas() {
   const [filtro, setFiltro] = useState('pendientes') // pendientes | completas | todas
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
-  const printRef = useRef(null)
+  const pdfRef = useRef(null)
 
   const load = async () => {
     setLoading(true)
@@ -158,20 +159,26 @@ export default function Actas() {
     setSaving(false)
   }
 
+  // PDF: se dibuja el acta como documento (ActaDocumento) fuera de la pantalla, se espera a que carguen sus
+  // fotos y firmas, y se captura en hojas tamaño carta con margenes. Antes se capturaba el modal tal cual: la
+  // primera descarga salia sin fotos (aun cargando) y recortada, y sin logo ni placa.
+  const [pdfActa, setPdfActa] = useState(null)
   const downloadPDF = async () => {
     setExporting(true)
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas-pro'),
-        import('jspdf'),
-      ])
-      await waitForImages(printRef.current)
-      const canvas = await html2canvas(printRef.current, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
-      const img = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({ orientation: pdfOrientation(canvas.width, canvas.height), unit: 'px', format: [canvas.width, canvas.height] })
-      pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height, undefined, 'FAST')
-      pdf.save(`Acta_${viewing.placa}_${viewing.fecha}.pdf`)
+      const { data: vehiculo } = await supabase.from('vehicles').select('placa, modelo, ciudad').eq('placa', viewing.placa).maybeSingle()
+      const idEntrega = viewing.acta_entrega_id || viewing.checklist?.acta_entrega_id
+      let listo
+      const cargado = new Promise((r) => { listo = r })
+      setPdfActa({ acta: viewing, vehiculo, entrega: actas.find((a) => a.id === idEntrega) || null, listo })
+      await cargado
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const tipo = viewing.tipo === 'Entrega' ? 'Entrega' : 'Recibido'
+      await guardarPdf(pdfRef.current, `Acta_${tipo}_${viewing.placa}_${numActa(viewing).replace(/\D/g, '') || viewing.fecha}.pdf`)
+    } catch (err) {
+      notify('No se pudo generar el PDF: ' + err.message, 'error')
     } finally {
+      setPdfActa(null)
       setExporting(false)
     }
   }
@@ -316,7 +323,7 @@ export default function Actas() {
 
       {viewing && (
         <Modal title={`${numActa(viewing)} — ${viewing.placa} — ${viewing.tipo} — ${formatDate(viewing.fecha)}`} onClose={() => setViewing(null)}>
-          <div ref={printRef} className="bg-white">
+          <div className="bg-white">
             <div className="flex items-center justify-between mb-1">
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${viewing.bloqueada ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                 {viewing.bloqueada ? 'Firmada por el cliente' : 'Pendiente de firma del cliente'}
@@ -358,6 +365,13 @@ export default function Actas() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {pdfActa && (
+        // Fuera de la pantalla: solo existe mientras se genera el PDF.
+        <div aria-hidden="true" style={{ position: 'fixed', left: -10000, top: 0 }}>
+          <div ref={pdfRef}><ActaDocumento acta={pdfActa.acta} vehiculo={pdfActa.vehiculo} entrega={pdfActa.entrega} onCargado={pdfActa.listo} /></div>
+        </div>
       )}
 
       {compartiendo && (

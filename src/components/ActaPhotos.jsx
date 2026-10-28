@@ -31,8 +31,10 @@ const firmar = async (path) => (path ? (await signAll([path]))[0] || null : null
 
 // Todo lo grafico del acta, en el orden del documento: recorrido, novedades, fotos adicionales del
 // gestor, fotos del cliente y las dos firmas. Es lo que sale tambien en el PDF.
-export default function ActaPhotos({ acta }) {
+// `onCargado` avisa cuando ya estan todas las URLs (el PDF espera a eso antes de capturar).
+export default function ActaPhotos({ acta, onCargado }) {
   const [g, setG] = useState(null)
+  useEffect(() => { if (g) onCargado?.() }, [g, onCargado])
 
   useEffect(() => {
     let cancelled = false
@@ -90,10 +92,10 @@ function Galeria({ titulo, fotos }) {
   if (!fotos.length) return null
   return (
     <div>
-      <p className="text-xs font-bold text-slate-500 uppercase mb-2">{titulo} ({fotos.length})</p>
+      <p className="text-xs font-bold text-slate-500 uppercase mb-2" data-corte>{titulo} ({fotos.length})</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {fotos.map((f) => (
-          <a key={f.path} href={f.url} target="_blank" rel="noreferrer" className="block">
+          <a key={f.path} href={f.url} target="_blank" rel="noreferrer" className="block" data-corte>
             <img src={f.url} alt={f.label} className="w-full h-24 object-cover rounded-lg border border-slate-200" />
             <p className="text-[11px] text-slate-600 mt-1 leading-tight">{f.label}</p>
           </a>
@@ -105,7 +107,7 @@ function Galeria({ titulo, fotos }) {
 
 function Firma({ titulo, url, nombre }) {
   return (
-    <div>
+    <div data-corte>
       <p className="text-xs font-bold text-slate-500 uppercase mb-2">{titulo}</p>
       <img src={url} alt={titulo} className="w-full max-h-32 object-contain border border-slate-200 rounded-lg bg-white" />
       {nombre && <p className="text-xs text-slate-600 mt-1">{nombre}</p>}

@@ -11,7 +11,7 @@ export default function ChecklistView({ checklist }) {
         // Orden de la lista actual primero; despues partes de actas viejas que ya no estan en la lista.
         const partes = [...(SUB_ITEMS[item] || []).filter((p) => c.partes?.[p]), ...guardadas.filter((p) => !SUB_ITEMS[item]?.includes(p))]
         return (
-          <div key={item} className="border-b border-slate-100 pb-1.5">
+          <div key={item} className="border-b border-slate-100 pb-1.5" data-corte>
             <EstadoRow label={item} entry={c} />
             {partes.length > 0 && (
               <div className="ml-3 mt-1 pl-3 border-l border-slate-200 flex flex-col gap-1">
