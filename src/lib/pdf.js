@@ -36,13 +36,25 @@ export function cortesPagina(altoTotal, altoPagina, limites) {
   return paginas
 }
 
+// html2canvas dibuja una copia de la pagina en un iframe que vuelve a pedir la hoja de estilos por la red; si
+// esa peticion falla (p. ej. el preview de Vercel la bloquea), el PDF sale sin estilos: letra Times, logo
+// gigante. Se copian al iframe las reglas que la pagina ya tiene cargadas, sin depender de la red.
+function copiarEstilos(doc) {
+  const css = Array.from(document.styleSheets).map((hoja) => {
+    try { return Array.from(hoja.cssRules).map((regla) => regla.cssText).join('\n') } catch { return '' }
+  }).join('\n')
+  const estilo = doc.createElement('style')
+  estilo.textContent = css
+  doc.head.appendChild(estilo)
+}
+
 // Captura `root` y lo guarda como PDF tamaño carta con margenes, partido en paginas por los data-corte y con
 // el numero de pagina abajo.
 export async function guardarPdf(root, nombreArchivo) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas-pro'), import('jspdf')])
   await waitForImages(root)
   const ESCALA = 2
-  const canvas = await html2canvas(root, { scale: ESCALA, backgroundColor: '#ffffff', useCORS: true })
+  const canvas = await html2canvas(root, { scale: ESCALA, backgroundColor: '#ffffff', useCORS: true, onclone: copiarEstilos })
   const pdf = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'p' })
   const anchoPag = pdf.internal.pageSize.getWidth()
   const altoPag = pdf.internal.pageSize.getHeight()
