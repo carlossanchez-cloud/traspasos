@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Mapa from './pages/Mapa'
 import Solicitudes from './pages/Solicitudes'
+import Asignaciones from './pages/Asignaciones'
 import Admin from './pages/Admin'
 import Actas from './pages/Actas'
 import Informes from './pages/Informes'
@@ -25,6 +26,7 @@ const NAV = [
   { to: '/sustitutos', label: 'Flota', icon: 'Car', end: true },
   { to: '/mapa', label: 'Mapa', icon: 'Map' },
   { to: '/solicitudes', label: 'Solicitar', icon: 'ClipboardList' },
+  { to: '/asignaciones', label: 'Asignaciones', icon: 'CheckCircle', soloAdmin: true },
   { to: '/actas', label: 'Actas', icon: 'FileText' },
   { to: '/informes', label: 'Informes', icon: 'Download' },
   { to: '/gastos', label: 'Gastos', icon: 'Fuel' },
@@ -47,7 +49,7 @@ function Shell({ children }) {
           <NavLink to="/" end className={navClass}>
             <Icon name="Menu" className="w-4 h-4" /> Menú principal
           </NavLink>
-          {NAV.map((item) => (
+          {NAV.filter((item) => !item.soloAdmin || isAdmin).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={navClass}>
               <Icon name={item.icon} className="w-4 h-4" /> {item.label}
             </NavLink>
@@ -124,6 +126,7 @@ export default function App() {
                       <Route path="/flota/:id" element={<Ficha />} />
                       <Route path="/mapa" element={<Mapa />} />
                       <Route path="/solicitudes" element={<Solicitudes />} />
+                      <Route path="/asignaciones" element={<RequireAdmin><Asignaciones /></RequireAdmin>} />
                       <Route path="/actas" element={<Actas />} />
                       <Route path="/informes" element={<Informes />} />
                       <Route path="/gastos" element={<Gastos />} />
