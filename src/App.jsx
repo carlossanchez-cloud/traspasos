@@ -18,8 +18,9 @@ import NotFound from './pages/NotFound'
 import MenuPrincipal from './pages/MenuPrincipal'
 import ModuloProximo from './pages/ModuloProximo'
 import { TEXTO_RECOBROS } from './lib/recobros'
-import GestionFlotaInicio, { SubmoduloEnConstruccion } from './pages/gestionFlota/GestionFlota'
-import { SUBMODULOS as SUBMODULOS_FLOTA } from './lib/gestionFlota'
+import ModuloInicio, { SubmoduloEnConstruccion } from './pages/modulos/ModuloSubmodulos'
+import { MODULO_FLOTA } from './lib/gestionFlota'
+import { MODULO_OPERACIONES } from './lib/operaciones'
 import InventarioInicio from './pages/inventario/Inicio'
 import InventarioTecnico from './pages/inventario/Tecnico'
 import InventarioComercial from './pages/inventario/Comercial'
@@ -126,9 +127,13 @@ export default function App() {
                 <Route path="/inventario/tecnico" element={<InventarioTecnico />} />
                 <Route path="/inventario/comercial" element={<InventarioComercial />} />
                 <Route path="/recobros" element={<ModuloProximo titulo="Recobros" texto={TEXTO_RECOBROS} />} />
-                <Route path="/gestion-flota" element={<RequireAdmin><GestionFlotaInicio /></RequireAdmin>} />
-                {SUBMODULOS_FLOTA.map(({ to: ruta }) => (
-                  <Route key={ruta} path={ruta} element={<RequireAdmin><SubmoduloEnConstruccion ruta={ruta} /></RequireAdmin>} />
+                <Route path={MODULO_FLOTA.base} element={<RequireAdmin><ModuloInicio modulo={MODULO_FLOTA} /></RequireAdmin>} />
+                {MODULO_FLOTA.submodulos.map(({ to: ruta }) => (
+                  <Route key={ruta} path={ruta} element={<RequireAdmin><SubmoduloEnConstruccion modulo={MODULO_FLOTA} ruta={ruta} /></RequireAdmin>} />
+                ))}
+                <Route path={MODULO_OPERACIONES.base} element={<ModuloInicio modulo={MODULO_OPERACIONES} />} />
+                {MODULO_OPERACIONES.submodulos.map(({ to: ruta }) => (
+                  <Route key={ruta} path={ruta} element={<SubmoduloEnConstruccion modulo={MODULO_OPERACIONES} ruta={ruta} />} />
                 ))}
                 <Route path="/*" element={
                   <Shell>

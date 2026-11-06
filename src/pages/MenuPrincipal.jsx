@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
 import { TEXTO_RECOBROS } from '../lib/recobros'
+import { TEXTO_OPERACIONES } from '../lib/operaciones'
 
 // Pantalla de entrada despues del login: se escoge a que modulo entrar.
 // Gestion de flota es solo para administradores.
@@ -9,6 +10,7 @@ const MODULOS = [
   { to: '/sustitutos', titulo: 'Sustitutos', icon: 'Car', texto: 'Flota de vehículos sustitutos: mapa, solicitudes, actas (entregado al cliente y recibido por Rentandes) e informes.' },
   { to: '/inventario', titulo: 'Inventario', icon: 'ClipboardList', texto: 'Activos recuperados en venta o recolocación: parte técnica y comercial.' },
   { to: '/gestion-flota', titulo: 'Gestión de flota', icon: 'Wrench', texto: 'Mantenimiento, kilometraje adicional, costos de repuestos, documentos, rentabilidad por vehículo y KPIs.', soloAdmin: true },
+  { to: '/operaciones', titulo: 'Operaciones', icon: 'CheckCircle', texto: TEXTO_OPERACIONES, proximamente: true },
   { to: '/recobros', titulo: 'Recobros', icon: 'FileText', texto: TEXTO_RECOBROS, proximamente: true },
 ]
 
@@ -31,7 +33,7 @@ export default function MenuPrincipal() {
         <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Flota Rentandes · Centro de gestión de activos</p>
         <h1 className="text-2xl font-black text-slate-800">Menú principal</h1>
         <p className="text-sm text-slate-500 mb-6">¿A qué módulo quieres entrar?</p>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {MODULOS.map((m) => {
             const bloqueado = m.soloAdmin && !isAdmin
             const contenido = (

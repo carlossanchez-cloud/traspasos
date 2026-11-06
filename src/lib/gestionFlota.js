@@ -25,3 +25,10 @@ export const SUBMODULOS = [
     texto: 'Todas las métricas de la flota en un solo lugar, también por gestor de flota.',
   },
 ]
+
+export const MODULO_FLOTA = {
+  base: '/gestion-flota',
+  titulo: 'Gestión de flota',
+  intro: 'Herramientas para los administradores de flota. Escoge un módulo:',
+  submodulos: SUBMODULOS,
+}
