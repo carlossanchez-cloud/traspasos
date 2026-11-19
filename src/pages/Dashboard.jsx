@@ -271,6 +271,12 @@ export default function Dashboard() {
                     <div className="mt-1 text-xs text-slate-500 font-medium">{v.cliente || 'Cliente sin nombre'}</div>
                     <p className="mt-2 text-xs text-amber-700">Esperando el acta de entrega firmada por el cliente.</p>
                     <ControlActas hechas={actasDeAsignacion(v, actas)} />
+                    {!actasDeAsignacion(v, actas).entrega && (
+                      <Link to={`/actas?entrega=${encodeURIComponent(v.placa)}`} onClick={(e) => e.stopPropagation()}
+                        className="mt-3 block w-full text-center text-xs font-bold px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white">
+                        Llenar acta de entrega
+                      </Link>
+                    )}
                   </>
                 )}
                 {v.estado === 'En proceso de recepción' && (

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../lib/AuthProvider'
 import { Icon } from '../lib/icons'
@@ -6,7 +7,7 @@ import { formatDate, formatKM, todayISO } from '../lib/format'
 import { guardarPdf } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import { CHECK_ITEMS, SUB_ITEMS, ESTADOS, ESTADO_COLOR, emptyChecklist, esNovedad, estadosParte, conResumen, novedadesConFoto, FOTOS_RECORRIDO } from '../lib/actaChecklist'
-import { numActa, tipoActa, agruparActas, entregaAbierta, puedeEliminarActa } from '../lib/ciclosActas'
+import { numActa, tipoActa, agruparActas, entregaAbierta, puedeEliminarActa, actasDeAsignacion } from '../lib/ciclosActas'
 import { publicActaUrl, waShareUrl, gmailShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -28,6 +29,8 @@ export default function Actas() {
   const { puedeEditar, isAdmin } = useAuth()
   const { toast, notify, clear } = useToast()
   const [placas, setPlacas] = useState([])
+  const [vehiculos, setVehiculos] = useState([])
+  const [params, setParams] = useSearchParams()
   const [todasActas, setActas] = useState([])
   // Las eliminadas no cuentan para el ciclo entrega -> recibido; solo se ven en el filtro "Eliminadas".
   const actas = todasActas.filter((a) => !a.eliminada_en)
@@ -51,11 +54,12 @@ export default function Actas() {
   const load = async () => {
     setLoading(true)
     const [{ data: v }, { data: a }] = await Promise.all([
-      supabase.from('vehicles').select('placa').order('placa'),
+      supabase.from('vehicles').select('placa, modelo, estado, cliente, admin_flota, fecha_inicio, fecha_fin, fecha_estado').order('placa'),
       // Se traen mas actas que antes (30) para poder emparejar cada entrega con su recibido.
       supabase.from('actas').select('*').order('created_at', { ascending: false }).limit(300),
     ])
     setPlacas((v || []).map((r) => r.placa))
+    setVehiculos(v || [])
     setActas(a || [])
     setLoading(false)
   }
@@ -76,6 +80,18 @@ export default function Actas() {
     setFotos([]); setFotosRecorrido({}); setFotosNovedad({}); setFirma(null); setExpanded({})
     setCreating(true)
   }
+
+  // Al confirmar una asignacion el vehiculo queda En proceso de entrega: su acta de entrega queda lista para
+  // llenar aqui (y desde Flota con ?entrega=PLACA), con placa y cliente ya puestos.
+  const porEntregar = vehiculos.filter((v) => v.estado === 'En proceso de entrega' && !actasDeAsignacion(v, actas).entrega)
+  const llenarEntrega = (v) => openCreate({ tipo: 'Entrega', placa: v.placa, cliente: v.cliente || '' })
+  const placaParam = params.get('entrega')
+  useEffect(() => {
+    if (!placaParam || loading || !puedeEditar) return
+    const v = vehiculos.find((x) => x.placa === placaParam)
+    if (v) llenarEntrega(v)
+    setParams({}, { replace: true })
+  }, [placaParam, loading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k) => (e) => setForm((f) => (k === 'tipo' || k === 'placa' ? conCiclo({ ...f, [k]: e.target.value }) : { ...f, [k]: e.target.value }))
   const setParte = (item, parte, field, value) => setChecklist((c) => ({
@@ -219,6 +235,33 @@ export default function Actas() {
           </button>
         )}
       </div>
+
+      {!loading && porEntregar.length > 0 && (
+        <div className="mb-6">
+          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Actas de entrega por hacer ({porEntregar.length})</p>
+          <div className="flex flex-col gap-2">
+            {porEntregar.map((v) => (
+              <div key={v.placa} className="bg-white border-2 border-dashed border-amber-300 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-800 text-sm">
+                    <span className="font-mono">{v.placa}</span> · {v.cliente || 'Cliente sin nombre'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {v.modelo} · asignado{v.admin_flota ? ` por solicitud de ${v.admin_flota}` : ''}{v.fecha_inicio ? ` · desde ${formatDate(v.fecha_inicio)}` : ''}
+                  </p>
+                </div>
+                {puedeEditar ? (
+                  <button onClick={() => llenarEntrega(v)} className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white">
+                    Llenar acta de entrega
+                  </button>
+                ) : (
+                  <span className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">Pendiente acta de entrega</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <Spinner label="Cargando actas..." />

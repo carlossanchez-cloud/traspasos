@@ -72,7 +72,7 @@ export default function Asignaciones() {
       p_solicitud_id: resolving.id, p_placa: placaElegida,
     })
     if (error) notify('Error asignando: ' + error.message, 'error')
-    else notify(`${placaElegida} asignado a ${resolving.cliente_empresa}. Sigue el acta de entrega: cuando el cliente la firme, el vehículo queda Asignado.`, 'success')
+    else notify(`${placaElegida} asignado a ${resolving.cliente_empresa}. Su acta de entrega quedó lista para llenar en Actas.`, 'success')
     setResolving(null)
     loadSolicitudes()
     avisarSolicitudes()
