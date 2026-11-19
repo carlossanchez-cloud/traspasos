@@ -7,7 +7,7 @@ import { formatDate, formatKM, todayISO } from '../lib/format'
 import { guardarPdf } from '../lib/pdf'
 import { useToast } from '../lib/useToast'
 import { emptyChecklist, conResumen, novedadesConFoto, FOTOS_RECORRIDO } from '../lib/actaChecklist'
-import { numActa, tipoActa, agruparActas, entregaAbierta, puedeEliminarActa, actasDeAsignacion } from '../lib/ciclosActas'
+import { numActa, tipoActa, tipoActaFrase, agruparActas, entregaAbierta, puedeEliminarActa, actasDeAsignacion } from '../lib/ciclosActas'
 import { publicActaUrl, waShareUrl, gmailShareUrl } from '../lib/shareLink'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
@@ -18,6 +18,7 @@ import ChecklistView from '../components/ChecklistView'
 import ActaDocumento from '../components/ActaDocumento'
 import PhotoPicker from '../components/PhotoPicker'
 import ChecklistEditor from '../components/ChecklistEditor'
+import { checklistDesde } from '../lib/estadoActual'
 import FotoRecorrido from '../components/FotoRecorrido'
 import Spinner, { ButtonSpinner } from '../components/Spinner'
 
@@ -40,6 +41,7 @@ export default function Actas() {
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState(EMPTY)
   const [checklist, setChecklist] = useState(emptyChecklist())
+  const [baseEstado, setBaseEstado] = useState(null) // fecha del estado actual del que arranco el checklist
   const [fotos, setFotos] = useState([])
   const [fotosRecorrido, setFotosRecorrido] = useState({}) // FOTOS_RECORRIDO key -> File
   const [fotosNovedad, setFotosNovedad] = useState({}) // fotoKey(item, parte) -> File
@@ -93,6 +95,22 @@ export default function Actas() {
     if (v) llenarEntrega(v)
     setParams({}, { replace: true })
   }, [placaParam, loading]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // El acta de entrega arranca con el checklist del estado actual del vehiculo (Ficha, paso SQL 31): el gestor
+  // confirma o corrige en vez de marcar todo desde cero. Si no hay estado actual, arranca todo en Bueno.
+  useEffect(() => {
+    if (!creating || form.tipo !== 'Entrega' || !form.placa) return undefined
+    let vigente = true
+    supabase.from('vehiculo_estados').select('checklist, created_at').eq('placa', form.placa)
+      .order('created_at', { ascending: false }).limit(1)
+      .then(({ data }) => {
+        if (!vigente) return
+        const e = data?.[0]
+        setChecklist(e ? checklistDesde(e.checklist) : emptyChecklist())
+        setBaseEstado(e ? e.created_at : null)
+      })
+    return () => { vigente = false }
+  }, [creating, form.tipo, form.placa])
 
   const set = (k) => (e) => setForm((f) => (k === 'tipo' || k === 'placa' ? conCiclo({ ...f, [k]: e.target.value }) : { ...f, [k]: e.target.value }))
   const setParte = (item, parte, field, value) => setChecklist((c) => ({
@@ -307,6 +325,11 @@ export default function Actas() {
 
           <div className="mt-4">
             <p className="text-xs font-bold text-slate-500 uppercase mb-2">Checklist</p>
+            {form.tipo === 'Entrega' && baseEstado && (
+              <p className="text-xs rounded-lg px-3 py-2 mb-2 bg-sky-50 text-sky-800 border border-sky-200">
+                Arranca con el <strong>estado actual</strong> del vehículo del {formatDate(baseEstado.slice(0, 10))} (Ficha). Confirma o corrige lo que cambió.
+              </p>
+            )}
             <ChecklistEditor checklist={checklist} setParte={setParte} expanded={expanded} setExpanded={setExpanded} />
           </div>
 
@@ -415,7 +438,7 @@ export default function Actas() {
       {eliminando && (
         <Modal title={`Eliminar ${numActa(eliminando.acta)} — ${eliminando.acta.placa}`} onClose={() => !eliminando.enviando && setEliminando(null)}>
           <p className="text-sm text-slate-600">
-            El acta {tipoActa(eliminando.acta).toLowerCase()} {numActa(eliminando.acta)} sale de la lista y su enlace de firma deja de
+            El acta {tipoActaFrase(eliminando.acta)} {numActa(eliminando.acta)} sale de la lista y su enlace de firma deja de
             funcionar. No se borra: queda en el filtro <strong>Eliminadas</strong> con la fecha, tu correo y el motivo.
           </p>
           <div className="mt-3">
@@ -600,7 +623,7 @@ function FilaActa({ acta, onVer, onEnviar, onEliminar, conPlaca }) {
 // editarlas, y solo agrega su nombre, observaciones, fotos opcionales y su firma.
 function EnviarFirma({ acta, notify }) {
   const url = publicActaUrl(acta.id)
-  const texto = `Acta ${tipoActa(acta).toLowerCase()} de ${acta.placa}, por favor revisa y firma:`
+  const texto = `Acta ${tipoActaFrase(acta)} de ${acta.placa}, por favor revisa y firma:`
   const btn = 'flex-1 text-center text-sm font-bold px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
   return (
     <div>

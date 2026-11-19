@@ -32,3 +32,31 @@ export function textoEstadoActual(vehiculo, version) {
     ...(version.observaciones ? ['', `Observaciones: ${version.observaciones}`] : []),
   ].join('\n')
 }
+
+// Partes cuyo estado u observacion cambio entre dos checklists (p. ej. estado actual vs ultima acta).
+export function diferenciasChecklist(antes, despues) {
+  const a = checklistDesde(antes)
+  const d = checklistDesde(despues)
+  const cambios = []
+  for (const item of CHECK_ITEMS) {
+    for (const parte of Object.keys(a[item].partes || {})) {
+      const x = a[item].partes[parte]
+      const y = d[item].partes[parte]
+      if (x.estado !== y.estado || (x.obs || '') !== (y.obs || '')) cambios.push({ item, parte, antes: x, despues: y })
+    }
+  }
+  return cambios
+}
+
+// Todas las fotos de un acta (recorrido, novedades y adicionales), sin repetir.
+export const fotosDeActa = (acta) => [...new Set([
+  ...Object.values(acta?.checklist?.fotos_recorrido || {}),
+  ...(acta?.fotos_urls || []),
+  ...CHECK_ITEMS.flatMap((item) => Object.values(acta?.checklist?.[item]?.partes || {}).map((p) => p.foto)),
+].filter(Boolean))]
+
+// Acta (no eliminada) de la placa mas nueva que el estado actual: se ofrece para actualizarlo. Si no hay estado
+// actual, cualquier acta sirve. null si no hay ninguna mas reciente.
+export const actaMasReciente = (actas, estado) => actas
+  .filter((a) => !a.eliminada_en && (!estado || (a.created_at || '') > estado.created_at))
+  .sort((x, y) => (y.created_at || '').localeCompare(x.created_at || ''))[0] || null

@@ -8,6 +8,8 @@ const entregaDe = (r) => r.acta_entrega_id || r.checklist?.acta_entrega_id || nu
 // queda con el vehiculo, para que no haya duda de cual es cual.
 export const TIPO_ACTA = { Entrega: 'Entregado al cliente', Recibido: 'Recibido por Rentandes' }
 export const tipoActa = (a) => TIPO_ACTA[a?.tipo] || a?.tipo || ''
+// Para usar dentro de una frase ("el acta entregado al cliente"): primera letra en minuscula, Rentandes intacto.
+export const tipoActaFrase = (a) => tipoActa(a).replace(/^./, (c) => c.toLowerCase())
 
 export const numActa = (a) => (a?.consecutivo != null ? `N.º ${String(a.consecutivo).padStart(4, '0')}` : 'Sin N.º')
 

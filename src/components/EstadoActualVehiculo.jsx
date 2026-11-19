@@ -4,7 +4,8 @@ import { useAuth } from '../lib/AuthProvider'
 import { formatDate } from '../lib/format'
 import { conResumen, ESTADO_COLOR } from '../lib/actaChecklist'
 import { novedadesActa } from '../lib/recepcion'
-import { checklistDesde, textoEstadoActual } from '../lib/estadoActual'
+import { checklistDesde, textoEstadoActual, diferenciasChecklist, fotosDeActa, actaMasReciente } from '../lib/estadoActual'
+import { numActa, tipoActa, tipoActaFrase } from '../lib/ciclosActas'
 import { waTextUrl, gmailTextUrl } from '../lib/shareLink'
 import { Icon } from '../lib/icons'
 import ChecklistView from './ChecklistView'
@@ -23,6 +24,9 @@ export default function EstadoActualVehiculo({ vehiculo, notify }) {
   const [vista, setVista] = useState(0) // indice de la version que se ve (0 = actual)
   const [urls, setUrls] = useState({}) // path -> signed url
   const [editando, setEditando] = useState(null)
+  const [actas, setActas] = useState([])
+  const [descartada, setDescartada] = useState(() => { try { return localStorage.getItem(`estado-descartado-${vehiculo.placa}`) } catch { return null } })
+  const [comparando, setComparando] = useState(null) // { acta, fotos: Set, conservar, guardando }
 
   const cargar = async () => {
     const { data, error } = await supabase.from('vehiculo_estados').select('*')
@@ -34,16 +38,54 @@ export default function EstadoActualVehiculo({ vehiculo, notify }) {
     }
     setVersiones(data || [])
     setVista(0)
+    const { data: a } = await supabase.from('actas').select('*').eq('placa', vehiculo.placa)
+      .order('created_at', { ascending: false }).limit(10)
+    setActas(a || [])
   }
   useEffect(() => { cargar() }, [vehiculo.placa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const version = versiones?.[vista] || null
-  useEffect(() => {
-    const faltan = (version?.fotos || []).filter((p) => !urls[p])
+  const firmar = (paths) => {
+    const faltan = paths.filter((p) => !urls[p])
     if (!faltan.length) return
     Promise.all(faltan.map((p) => supabase.storage.from('actas').createSignedUrl(p, 3600)))
       .then((rs) => setUrls((u) => ({ ...u, ...Object.fromEntries(faltan.map((p, i) => [p, rs[i].data?.signedUrl]).filter(([, url]) => url)) })))
-  }, [version]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
+  useEffect(() => { firmar(version?.fotos || []) }, [version]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Acta mas nueva que el estado actual (p. ej. el recibido de un prestamo): se ofrece para actualizarlo.
+  const candidata = versiones && !faltaSql ? actaMasReciente(actas, versiones[0]) : null
+  const ofrecer = isAdmin && candidata && candidata.id !== descartada
+  const abrirComparacion = () => {
+    const fotos = fotosDeActa(candidata)
+    firmar([...fotos, ...(versiones[0]?.fotos || [])])
+    setComparando({ acta: candidata, fotos: new Set(fotos), conservar: false, guardando: false })
+  }
+  const descartar = () => {
+    try { localStorage.setItem(`estado-descartado-${vehiculo.placa}`, candidata.id) } catch { /* sin almacenamiento: se vuelve a ofrecer */ }
+    setDescartada(candidata.id)
+    setComparando(null)
+  }
+  const actualizarDesdeActa = async () => {
+    setComparando((c) => ({ ...c, guardando: true }))
+    const anterior = versiones[0]
+    const fotos = [...(comparando.conservar ? anterior?.fotos || [] : []), ...comparando.fotos]
+    const { error } = await supabase.from('vehiculo_estados').insert({
+      placa: vehiculo.placa,
+      checklist: conResumen(checklistDesde(comparando.acta.checklist)),
+      fotos: [...new Set(fotos)],
+      observaciones: [anterior?.observaciones, `Actualizado desde el acta ${tipoActaFrase(comparando.acta)} ${numActa(comparando.acta)}.`].filter(Boolean).join(' '),
+      creado_por_email: profile?.email || null,
+    })
+    if (error) {
+      notify('No se pudo actualizar: ' + error.message, 'error')
+      setComparando((c) => ({ ...c, guardando: false }))
+      return
+    }
+    notify('Estado actual actualizado con el acta.', 'success')
+    setComparando(null)
+    cargar()
+  }
 
   const abrirEdicion = () => setEditando({
     checklist: checklistDesde(versiones?.[0]?.checklist),
@@ -101,6 +143,19 @@ export default function EstadoActualVehiculo({ vehiculo, notify }) {
           </button>
         )}
       </div>
+
+      {ofrecer && (
+        <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <p className="text-sm text-sky-900">
+            Hay un acta más reciente que el estado actual: <strong>{tipoActa(candidata)} {numActa(candidata)}</strong> del {formatDate(candidata.fecha)}.
+            ¿Quieres actualizar el estado actual con ella?
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <button onClick={descartar} className="text-xs font-bold px-3 py-2 rounded-lg border border-sky-300 bg-white text-sky-800">Ahora no</button>
+            <button onClick={abrirComparacion} className="text-xs font-bold px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white">Ver diferencias</button>
+          </div>
+        </div>
+      )}
 
       {versiones === null ? (
         <Spinner label="Cargando estado actual..." className="py-4" />
@@ -175,6 +230,68 @@ export default function EstadoActualVehiculo({ vehiculo, notify }) {
             </details>
           )}
         </>
+      )}
+
+      {comparando && (
+        <Modal title={`Actualizar con ${tipoActaFrase(comparando.acta)} ${numActa(comparando.acta)}`} onClose={() => !comparando.guardando && setComparando(null)} wide>
+          {(() => {
+            const cambios = diferenciasChecklist(versiones[0]?.checklist, comparando.acta.checklist)
+            const fotosActa = fotosDeActa(comparando.acta)
+            const badge = (e) => <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded border ${ESTADO_COLOR[e.estado] || ''}`}>{e.estado}</span>
+            return (
+              <>
+                <p className="text-sm text-slate-500 mb-3">
+                  Acta del {formatDate(comparando.acta.fecha)}{comparando.acta.cliente ? ` (${comparando.acta.cliente})` : ''} frente al estado actual
+                  {versiones[0] ? ` del ${formatDate(versiones[0].created_at.slice(0, 10))}` : ' (todavía no hay)'}.
+                </p>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Diferencias en el checklist ({cambios.length})</p>
+                {cambios.length === 0 ? (
+                  <p className="text-sm text-emerald-700 mb-3">El checklist del acta es igual al estado actual.</p>
+                ) : (
+                  <ul className="flex flex-col gap-1.5 mb-3">
+                    {cambios.map((c) => (
+                      <li key={`${c.item}|${c.parte}`} className="text-sm text-slate-700 flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold">{c.item} › {c.parte}:</span>
+                        {badge(c.antes)}{c.antes.obs ? <span className="text-xs text-slate-500">{c.antes.obs}</span> : null}
+                        <span className="text-slate-400">→</span>
+                        {badge(c.despues)}{c.despues.obs ? <span className="text-xs text-slate-500">{c.despues.obs}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <p className="text-xs font-bold text-slate-500 uppercase mt-4 mb-2">Fotos del acta: marca las que quedan en el estado actual</p>
+                {fotosActa.length === 0 ? <p className="text-sm text-slate-400">El acta no tiene fotos.</p> : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {fotosActa.map((p) => {
+                      const on = comparando.fotos.has(p)
+                      const toggle = () => setComparando((c) => { const f = new Set(c.fotos); if (f.has(p)) f.delete(p); else f.add(p); return { ...c, fotos: f } })
+                      return (
+                        <button key={p} type="button" onClick={toggle} className={`relative rounded-lg overflow-hidden border-2 ${on ? 'border-emerald-500' : 'border-transparent opacity-50'}`}>
+                          {urls[p] ? <img src={urls[p]} alt="Foto del acta" className="w-full aspect-[4/3] object-cover" /> : <div className="w-full aspect-[4/3] bg-slate-100" />}
+                          <span className={`absolute top-1 right-1 w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center ${on ? 'bg-emerald-600 text-white' : 'bg-white text-slate-400 border border-slate-300'}`}>{on ? '✓' : ''}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {versiones[0]?.fotos?.length > 0 && (
+                  <label className="flex items-center gap-2 mt-3 text-sm text-slate-700">
+                    <input type="checkbox" checked={comparando.conservar} onChange={(e) => setComparando((c) => ({ ...c, conservar: e.target.checked }))} />
+                    Conservar también las {versiones[0].fotos.length} fotos del estado actual
+                  </label>
+                )}
+
+                <div className="flex flex-col sm:flex-row justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
+                  <button onClick={descartar} disabled={comparando.guardando} className="text-sm font-bold px-4 py-2 rounded-lg border border-slate-300 text-slate-700">No actualizar</button>
+                  <button onClick={actualizarDesdeActa} disabled={comparando.guardando} className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2 rounded-lg disabled:opacity-50">
+                    {comparando.guardando && <ButtonSpinner />} Actualizar estado actual
+                  </button>
+                </div>
+              </>
+            )
+          })()}
+        </Modal>
       )}
 
       {editando && (
