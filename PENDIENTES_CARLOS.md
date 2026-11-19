@@ -3,7 +3,13 @@
 Cosas de la rama `sandbox/alejo` que necesitan a alguien con acceso a Supabase o a Vercel. Desde la app no se
 pueden hacer.
 
-## 1. Preview: al día
+## 1. Ahora: paso 31 en el Supabase del preview
+
+| Paso | Archivo | Para qué |
+|---|---|---|
+| 31 | `supabase/steps/31_estado_actual_vehiculo.sql` | Tabla `vehiculo_estados`: en la Ficha de cada vehículo, el Administrador general registra fotos y el checklist de cómo está hoy (punto de partida antes de entregarlo). Cada actualización es una versión nueva; nada se sobrescribe. Sin este paso, la Ficha avisa que falta. |
+
+Para confirmar: `select count(*) from vehiculo_estados;` debe responder (0 al principio), sin error.
 
 Los pasos 19 a 30 ya se corrieron en el Supabase del preview (Carlos confirmó los 25 a 30 el 30/10/2026).
 Si Inventario sigue vacío en el preview, falta `importar_inventario.sql` (lo tiene Alejo; **no está en el
@@ -18,7 +24,7 @@ select (select count(*) from inv_activos) as activos, (select count(*) from inv_
 
 1. Revisar y unir el pull request de `sandbox/alejo` a `main`.
 2. En el Supabase de producción (`xsbfohfjqkjwyubzxqbf`) correr, en este orden, los pasos **19, 20, 21, 22, 23,
-   24, 25, 26, 27, 28, 29 y 30** de `supabase/steps/`. Sin ellos, las actas nuevas fallan en producción.
+   24, 25, 26, 27, 28, 29, 30 y 31** de `supabase/steps/`. Sin ellos, las actas nuevas fallan en producción.
 3. Cargar el inventario con `importar_inventario.sql` (lo tiene Alejo; **no está en el repositorio** porque trae
    precios y VPN reales). Una sola vez, después del 23; si ya hay datos se detiene sola.
 4. Revisar que en Supabase → Authentication → URL Configuration esté la URL de producción.
@@ -36,7 +42,8 @@ select (select count(*) from inv_activos) as activos, (select count(*) from inv_
 | 27 | `27_vehiculo_al_asignar.sql` | Copia del vehículo al asignarlo (ver arriba). |
 | 28 | `28_arrendamiento_tercerizado.sql` | Asignación por arrendamiento tercerizado (ver arriba). |
 | 29 | `29_ciclo_estados_vehiculo.sql` | Estados del vehículo según las actas (ver arriba). |
-| 30 | `30_cancelar_solicitud.sql` | Cancelar solicitudes con motivo (ver arriba). |
+| 30 | `30_cancelar_solicitud.sql` | Cancelar solicitudes con motivo. |
+| 31 | `31_estado_actual_vehiculo.sql` | Fotos y estado actual de cada vehículo (ver arriba). |
 
 Para confirmar en producción:
 

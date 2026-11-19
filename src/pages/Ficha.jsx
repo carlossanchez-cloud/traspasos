@@ -10,6 +10,9 @@ import MaintenancePanel from '../components/MaintenancePanel'
 import Spinner from '../components/Spinner'
 import { ButtonSpinner } from '../components/Spinner'
 import Row from '../components/Row'
+import Toast from '../components/Toast'
+import EstadoActualVehiculo from '../components/EstadoActualVehiculo'
+import { useToast } from '../lib/useToast'
 
 export default function Ficha() {
   const { id } = useParams()
@@ -17,6 +20,7 @@ export default function Ficha() {
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const printRef = useRef(null)
+  const { toast, notify, clear } = useToast()
 
   useEffect(() => {
     supabase.from('vehicles').select('*').eq('id', id).single()
@@ -123,8 +127,11 @@ export default function Ficha() {
         <div className="mt-4 pt-4 border-t border-slate-100">
           <MaintenancePanel detalle={vehicle.mto_detalle} kmActual={vehicle.km_actual} onChange={() => {}} readOnly />
         </div>
+
+        <EstadoActualVehiculo vehiculo={vehicle} notify={notify} />
         </div>
       </div>
+      <Toast {...toast} onClose={clear} />
     </div>
   )
 }
